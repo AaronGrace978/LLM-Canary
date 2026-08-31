@@ -1,0 +1,24 @@
+[package]
+name = "llm-canary"
+version = "0.1.0"
+description = "Plant fake secrets in your repos. If an AI regurgitates them, you know who trained on your code."
+authors = ["LLM Canary"]
+edition = "2021"
+
+[lib]
+name = "llm_canary_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rand = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+url = "2"
