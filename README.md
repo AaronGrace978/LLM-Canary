@@ -1,5 +1,7 @@
 # LLM Canary
 
+![LLM Canary](docs/hero.png)
+
 Plant unique fake secrets (canary tokens) in your repos. If any AI service ever regurgitates them, you know exactly who trained on your code.
 
 Desktop app (Tauri 2). If they trained on it, the bird sings.
