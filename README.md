@@ -1,6 +1,8 @@
 # LLM Canary
 
-Desktop app (Tauri 2) that plants unique fake secrets in a repository. If an AI service ever regurgitates them, you know which lab trained on your code.
+Plant unique fake secrets (canary tokens) in your repos. If any AI service ever regurgitates them, you know exactly who trained on your code.
+
+Desktop app (Tauri 2). If they trained on it, the bird sings.
 
 ## Run
 
