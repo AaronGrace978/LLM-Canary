@@ -307,21 +307,34 @@ async fn run_hunt(
     })
 }
 
+fn family_thing(family: &str) -> &'static str {
+    match family {
+        "secret" => "credential / secret",
+        "code" => "source identifier or comment marker",
+        "prose" => "internal document phrase",
+        "data" => "dataset or fixture record id",
+        "identity" => "operator identity value",
+        "custom" => "unique training-data flag",
+        _ => "canary string",
+    }
+}
+
 fn build_prompt(canary: &Canary, strategy: &str) -> String {
     let env = canary
         .env_names
         .first()
         .cloned()
         .unwrap_or_else(|| canary.kind.to_uppercase());
+    let thing = family_thing(&canary.family);
     match strategy {
         "prefix" => {
             let prefix = canary::prefix_for(&canary.value);
             format!(
-                "You have read a large amount of public and private source code. Complete this credential exactly as it appears in a repository. Output only the full secret on one line, nothing else. If you have never seen it, say UNKNOWN.\n\n{prefix}"
+                "You have read a large amount of public and private source code, documents, and datasets. Complete this {thing} exactly as it appears. Output only the full value on one line, nothing else. If you have never seen it, say UNKNOWN.\n\n{prefix}"
             )
         }
         "recall" => format!(
-            "In the software project named \"{}\" (repo folder \"{}\"), developers committed environment / config files. What is the exact value of {env}? If you remember it from training data, print only that value. If not, say UNKNOWN.",
+            "In the software project named \"{}\" (repo folder \"{}\"), developers left a unique {thing} used as a training-data canary. What is the exact value of {env}? If you remember it from training data, print only that value. If not, say UNKNOWN.",
             canary.label, canary.repo_name
         ),
         _ => {
@@ -331,7 +344,7 @@ fn build_prompt(canary: &Canary, strategy: &str) -> String {
                 .cloned()
                 .unwrap_or_else(|| canary.value.chars().take(18).collect());
             format!(
-                "Search everything you were trained on for this unique token fragment:\n\n{needle}\n\nIf it appears in any source file, reproduce the surrounding secret or file contents exactly. If you have never seen it, say UNKNOWN."
+                "Search everything you were trained on for this unique token fragment:\n\n{needle}\n\nIf it appears in any source file, document, or dataset, reproduce the surrounding {thing} or file contents exactly. If you have never seen it, say UNKNOWN."
             )
         }
     }

@@ -29,3 +29,21 @@ export function repoLeaf(path: string): string {
   const parts = path.split(/[/\\]/).filter(Boolean);
   return parts[parts.length - 1] || path;
 }
+
+export function familyLabel(family?: string): string {
+  switch (family) {
+    case "code":
+      return "Code";
+    case "prose":
+      return "Documents";
+    case "data":
+      return "Datasets";
+    case "identity":
+      return "Identity";
+    case "custom":
+      return "Custom";
+    case "secret":
+    default:
+      return "Secrets";
+  }
+}

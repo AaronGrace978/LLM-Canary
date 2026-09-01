@@ -78,7 +78,7 @@ export default function App() {
             onClick={() => setReveal((v) => !v)}
             type="button"
           >
-            {reveal ? "Secrets shown" : "Secrets hidden"}
+            {reveal ? "Values shown" : "Values hidden"}
           </button>
           <div className="win">
             <button type="button" onClick={() => getCurrentWindow().minimize()} aria-label="Minimize">

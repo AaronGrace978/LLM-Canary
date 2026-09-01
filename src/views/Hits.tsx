@@ -57,7 +57,7 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
           {found && (
             <div className="scan-result">
               {found.length === 0 ? (
-                <p className="empty-inline">No planted secrets in that text.</p>
+                <p className="empty-inline">No planted canaries in that text.</p>
               ) : (
                 found.map((h) => (
                   <p key={h.canaryId} className="hit-banner">

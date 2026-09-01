@@ -1,8 +1,9 @@
 {
   "name": "llm-canary",
   "private": true,
-  "version": "0.1.0",
-  "description": "Plant fake secrets in your repos. If an AI regurgitates them, you know who trained on your code.",
+  "version": "0.2.0",
+  "description": "Plant unique training-data canaries in your repos. If an AI regurgitates them, you know who trained on your data.",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
     "dev": "vite",

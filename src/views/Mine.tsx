@@ -26,8 +26,8 @@ export function Mine({
             {singing ? "A canary is singing." : "The mine is quiet."}
           </h1>
           <p className="lede">
-            Plant unique fake secrets in a repo. If any model ever regurgitates them, you know
-            exactly who trained on your code.
+            Plant unique canaries in a repo — secrets, code, docs, datasets, or any string you
+            flag. If any model ever regurgitates them, you know exactly who trained on your data.
           </p>
           <div className="hero-actions">
             <button className="btn primary" onClick={() => go("plant")}>
@@ -55,15 +55,16 @@ export function Mine({
           <h2>How the trap works</h2>
           <ol className="steps">
             <li>
-              <b>Plant</b> high-entropy fake keys that look like the real thing — AWS, GitHub, OpenAI,
-              Stripe, a private key. Only this machine knows the values.
+              <b>Plant</b> high-entropy bait that looks like real training data — secrets, unique
+              code, internal phrases, dataset rows, or any string you paste. Only this machine
+              knows the values.
             </li>
             <li>
               <b>Commit and push.</b> If the files never leave your laptop, no trainer will ever see them.
             </li>
             <li>
               <b>Hunt.</b> We ask each model to complete a prefix, recall a project, or reproduce a needle.
-              If the unique remainder comes back, that lab trained on your tree.
+              If the unique remainder comes back, that lab trained on this tree.
             </li>
           </ol>
         </section>

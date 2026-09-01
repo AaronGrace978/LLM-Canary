@@ -1,10 +1,11 @@
 use rand::Rng;
 
-use crate::models::{kinds_catalog, new_id};
+use crate::models::{family_name, kinds_catalog, new_id};
 
 pub struct Secret {
     pub kind: String,
     pub kind_name: String,
+    pub family: String,
     pub value: String,
     pub needles: Vec<String>,
     pub env_names: Vec<String>,
@@ -36,25 +37,57 @@ fn interior_needle(value: &str) -> Option<String> {
     }
 }
 
+fn catalog_meta(kind: &str) -> (String, String, String) {
+    if let Some(k) = kinds_catalog().into_iter().find(|k| k.id == kind) {
+        (k.name, k.family, k.family_name)
+    } else if kind == "custom" {
+        (
+            "Custom flag".into(),
+            "custom".into(),
+            family_name("custom").into(),
+        )
+    } else {
+        (kind.to_string(), "secret".into(), family_name("secret").into())
+    }
+}
+
 fn with_needles(kind: &str, value: String, env_names: Vec<String>) -> Secret {
-    let kind_name = kinds_catalog()
-        .into_iter()
-        .find(|k| k.id == kind)
-        .map(|k| k.name)
-        .unwrap_or_else(|| kind.to_string());
+    with_needles_extra(kind, value, env_names, Vec::new())
+}
+
+fn with_needles_extra(
+    kind: &str,
+    value: String,
+    env_names: Vec<String>,
+    extra_needles: Vec<String>,
+) -> Secret {
+    let (kind_name, family, _) = catalog_meta(kind);
     let mut needles = vec![];
     if let Some(n) = interior_needle(&value) {
         needles.push(n);
     }
     if value.len() > 20 {
-        let suffix: String = value.chars().rev().take(14).collect::<String>().chars().rev().collect();
+        let suffix: String = value
+            .chars()
+            .rev()
+            .take(14)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
         if suffix.len() >= 10 && !needles.contains(&suffix) {
             needles.push(suffix);
+        }
+    }
+    for n in extra_needles {
+        if n.len() >= 10 && !needles.contains(&n) && n != value {
+            needles.push(n);
         }
     }
     Secret {
         kind: kind.into(),
         kind_name,
+        family,
         value,
         needles,
         env_names,
@@ -68,11 +101,7 @@ pub fn mint(kind: &str) -> Vec<Secret> {
             let secret = chars(40, ALNUM);
             vec![
                 with_needles("aws", access, vec!["AWS_ACCESS_KEY_ID".into()]),
-                with_needles(
-                    "aws",
-                    secret,
-                    vec!["AWS_SECRET_ACCESS_KEY".into()],
-                ),
+                with_needles("aws", secret, vec!["AWS_SECRET_ACCESS_KEY".into()]),
             ]
         }
         "github" => {
@@ -121,11 +150,7 @@ pub fn mint(kind: &str) -> Vec<Secret> {
             let pass = chars(28, ALNUM);
             let host = format!("db-{}.internal.net", chars(8, HEX));
             let value = format!("postgres://{}:{}@{}:5432/prod", user, pass, host);
-            vec![with_needles(
-                "postgres",
-                value,
-                vec!["DATABASE_URL".into()],
-            )]
+            vec![with_needles("postgres", value, vec!["DATABASE_URL".into()])]
         }
         "huggingface" => {
             let value = format!("hf_{}", chars(37, ALNUM));
@@ -155,8 +180,99 @@ pub fn mint(kind: &str) -> Vec<Secret> {
                 vec!["SSH_PRIVATE_KEY".into()],
             )]
         }
+        "code_watermark" => {
+            let id = format!("cnry_wmk_{}", chars(16, HEX));
+            let tail: String = id.chars().rev().take(8).collect::<String>().chars().rev().collect();
+            let fn_name = format!("velquor_wmk_{tail}");
+            let const_name = format!("CANARY_WMK_{}", tail.to_uppercase());
+            vec![with_needles_extra(
+                "code_watermark",
+                id,
+                vec![fn_name.clone(), const_name],
+                vec![fn_name],
+            )]
+        }
+        "code_comment" => {
+            let value = format!("CNRY-TAG-{}", chars(20, ALNUM_UPPER));
+            vec![with_needles(
+                "code_comment",
+                value,
+                vec!["CANARY_COMMENT_TAG".into()],
+            )]
+        }
+        "doc_phrase" => {
+            let token = format!("CNRY{}", chars(16, HEX));
+            let nonce = format!("Velquor{}", chars(8, HEX));
+            vec![with_needles_extra(
+                "doc_phrase",
+                token,
+                vec!["INTERNAL_ARCHITECTURE_WATERMARK".into(), nonce.clone()],
+                vec![nonce],
+            )]
+        }
+        "codename" => {
+            let value = format!("Velquor-{}-lattice", chars(10, HEX));
+            vec![with_needles("codename", value, vec!["PROJECT_CODENAME".into()])]
+        }
+        "dataset_row" => {
+            let value = format!("cnry_row_{}", chars(20, HEX));
+            vec![with_needles(
+                "dataset_row",
+                value,
+                vec!["CANARY_SEED_RECORD_ID".into()],
+            )]
+        }
+        "json_record" => {
+            let value = format!("cnry_json_{}", chars(20, HEX));
+            vec![with_needles(
+                "json_record",
+                value,
+                vec!["CANARY_FIXTURE_ID".into()],
+            )]
+        }
+        "canary_email" => {
+            let local = format!("nora.velquor.{}", chars(12, HEX));
+            let value = format!("{local}@canary.invalid");
+            vec![with_needles(
+                "canary_email",
+                value,
+                vec!["CANARY_OPERATOR_EMAIL".into()],
+            )]
+        }
+        "employee_id" => {
+            let value = format!("CNV-{}", chars(16, ALNUM_UPPER));
+            vec![with_needles(
+                "employee_id",
+                value,
+                vec!["CANARY_EMPLOYEE_ID".into()],
+            )]
+        }
         _ => vec![],
     }
+}
+
+pub fn mint_custom(tokens: &[String]) -> Result<Vec<Secret>, String> {
+    let mut out = Vec::new();
+    for raw in tokens {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let value = if line.chars().count() < 12 {
+            format!("{line} · cnry_{}", chars(16, HEX))
+        } else {
+            line.to_string()
+        };
+        out.push(with_needles(
+            "custom",
+            value,
+            vec!["CUSTOM_TRAINING_FLAG".into()],
+        ));
+    }
+    if out.is_empty() && tokens.iter().any(|t| !t.trim().is_empty()) {
+        return Err("Custom flags need at least one non-empty line.".into());
+    }
+    Ok(out)
 }
 
 fn wrap64(s: &str) -> String {
@@ -180,7 +296,8 @@ pub fn prefix_for(value: &str) -> String {
 
 pub fn detect(response: &str, value: &str, needles: &[String], prompt: &str) -> Vec<String> {
     let mut matched = Vec::new();
-    if value.len() >= 12 && response.contains(value) && !prompt.contains(value) {
+    let min_value = if value.len() >= 12 { 12 } else { 8 };
+    if value.len() >= min_value && response.contains(value) && !prompt.contains(value) {
         matched.push(value.to_string());
     }
     for n in needles {
@@ -189,4 +306,52 @@ pub fn detect(response: &str, value: &str, needles: &[String], prompt: &str) -> 
         }
     }
     matched
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::kinds_catalog;
+
+    #[test]
+    fn mints_every_catalog_kind() {
+        for k in kinds_catalog() {
+            let minted = mint(&k.id);
+            assert!(
+                !minted.is_empty(),
+                "kind {} should mint at least one canary",
+                k.id
+            );
+            for s in minted {
+                assert!(!s.value.is_empty(), "{}", k.id);
+                assert_eq!(s.family, k.family, "{}", k.id);
+                assert_eq!(s.kind, k.id);
+            }
+        }
+    }
+
+    #[test]
+    fn detect_finds_full_value() {
+        let v = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789ABCD";
+        let hits = detect(&format!("here it is {v} thanks"), v, &[], "prompt only");
+        assert_eq!(hits, vec![v.to_string()]);
+    }
+
+    #[test]
+    fn detect_ignores_prompt_echo() {
+        let v = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789ABCD";
+        let prompt = format!("complete {v}");
+        let hits = detect(&format!("I saw {v}"), v, &[], &prompt);
+        assert!(hits.is_empty());
+    }
+
+    #[test]
+    fn custom_flags_pad_short_lines() {
+        let minted = mint_custom(&["short".into(), "  ".into(), "a unique custom training flag".into()])
+            .unwrap();
+        assert_eq!(minted.len(), 2);
+        assert!(minted[0].value.contains("cnry_"));
+        assert_eq!(minted[1].value, "a unique custom training flag");
+        assert_eq!(minted[0].family, "custom");
+    }
 }

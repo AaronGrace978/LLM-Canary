@@ -498,6 +498,18 @@ main {
   padding: 24px;
 }
 
+.family-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.family-head .lbl {
+  margin-bottom: 0;
+}
+
 .chips {
   display: grid;
   grid-template-columns: 1fr 1fr;

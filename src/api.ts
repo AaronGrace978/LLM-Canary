@@ -22,6 +22,7 @@ export async function plantCanaries(req: {
   label: string;
   kinds: string[];
   density: string;
+  customTokens?: string[];
 }): Promise<PlantResult> {
   return invoke("plant_canaries", { req });
 }
