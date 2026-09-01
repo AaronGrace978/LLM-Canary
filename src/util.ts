@@ -42,8 +42,29 @@ export function familyLabel(family?: string): string {
       return "Identity";
     case "custom":
       return "Custom";
+    case "corpus":
+      return "Corpus";
     case "secret":
     default:
       return "Secrets";
   }
+}
+
+export function citationFor(c: {
+  sourceTitle?: string;
+  sourceLocator?: string;
+  label: string;
+}): string {
+  const title = (c.sourceTitle || c.label).trim() || c.label;
+  const loc = (c.sourceLocator || "").trim();
+  return loc ? `${title} · ${loc}` : title;
+}
+
+export function sensitivityFor(c?: { sourceKind?: string; sensitivity?: string }): "public" | "private" {
+  if (c?.sensitivity === "public" || c?.sourceKind === "public_domain") return "public";
+  return "private";
+}
+
+export function sensitivityLabel(s?: string): string {
+  return s === "public" ? "Public / expected" : "Private / unique";
 }

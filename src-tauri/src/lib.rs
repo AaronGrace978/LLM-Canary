@@ -1,6 +1,8 @@
 mod canary;
+mod corpus;
 mod models;
 mod plant;
+mod provenance;
 mod providers;
 mod store;
 
@@ -24,12 +26,31 @@ fn persist(state: &AppState) -> Result<(), String> {
 
 fn snapshot_from(db: &Db) -> Snapshot {
     let hits = db.probes.iter().filter(|p| p.hit).count();
+    let answers = provenance::build_provider_answers(&db.canaries, &db.probes);
+    let private_hits = answers.iter().map(|a| a.private_hits).sum();
+    let public_hits = answers.iter().map(|a| a.public_hits).sum();
+    let provenance = ProvenanceSummary {
+        answers: answers
+            .into_iter()
+            .map(|a| ProvenanceAnswer {
+                provider_name: a.provider_name,
+                model: a.model,
+                public_sources: a.public_sources,
+                private_sources: a.private_sources,
+                public_hits: a.public_hits,
+                private_hits: a.private_hits,
+            })
+            .collect(),
+        private_hits,
+        public_hits,
+    };
     Snapshot {
         canaries: db.canaries.clone(),
         providers: db.providers.clone(),
         probes: db.probes.clone(),
         kinds: kinds_catalog(),
         hits,
+        provenance,
     }
 }
 
@@ -70,6 +91,34 @@ fn save_provider(state: State<AppState>, patch: ProviderPatch) -> Result<Snapsho
 #[tauri::command]
 fn plant_canaries(state: State<AppState>, req: PlantRequest) -> Result<PlantResult, String> {
     let result = plant::plant(req)?;
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        db.canaries.extend(result.canaries.clone());
+    }
+    persist(&state)?;
+    Ok(result)
+}
+
+#[tauri::command]
+fn ingest_corpus(state: State<AppState>, req: IngestRequest) -> Result<IngestResult, String> {
+    let result = corpus::ingest(req)?;
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        db.canaries.extend(result.canaries.clone());
+    }
+    persist(&state)?;
+    Ok(result)
+}
+
+#[tauri::command]
+fn load_public_domain_pack(state: State<AppState>) -> Result<IngestResult, String> {
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        if corpus::already_has_public_domain(&db.canaries) {
+            return Err("Public-domain pack is already in the flock.".into());
+        }
+    }
+    let result = corpus::public_domain_pack();
     {
         let mut db = state.db.lock().map_err(|e| e.to_string())?;
         db.canaries.extend(result.canaries.clone());
@@ -173,7 +222,7 @@ async fn run_hunt(
     };
 
     if canaries.is_empty() {
-        return Err("Plant canaries first.".into());
+        return Err("Plant canaries or ingest a corpus first.".into());
     }
     if providers.is_empty() {
         return Err("No armed providers. Paste an API key and pick a model in Cages.".into());
@@ -224,7 +273,11 @@ async fn run_hunt(
                 };
 
                 let matched = if error.is_none() {
-                    canary::detect(&response, &canary.value, &canary.needles, &prompt)
+                    if canary.family == "corpus" {
+                        corpus::detect_passage(&response, canary, &prompt)
+                    } else {
+                        canary::detect(&response, &canary.value, &canary.needles, &prompt)
+                    }
                 } else {
                     vec![]
                 };
@@ -248,6 +301,8 @@ async fn run_hunt(
                     hit,
                     matched: matched.clone(),
                     error: error.clone(),
+                    citation: citation_for(canary),
+                    sensitivity: provenance::sensitivity_for(canary).as_str().into(),
                 };
 
                 let _ = app.emit(
@@ -268,7 +323,11 @@ async fn run_hunt(
                         message: if let Some(e) = &error {
                             e.clone()
                         } else if hit {
-                            format!("HIT — {} sang {}", provider.name, canary.kind_name)
+                            if canary.family == "corpus" {
+                                corpus::hit_message(&provider.name, canary)
+                            } else {
+                                format!("HIT — {} sang {}", provider.name, citation_for(canary))
+                            }
                         } else {
                             format!("{} / {} is clean", provider.name, provider.model)
                         },
@@ -315,11 +374,15 @@ fn family_thing(family: &str) -> &'static str {
         "data" => "dataset or fixture record id",
         "identity" => "operator identity value",
         "custom" => "unique training-data flag",
+        "corpus" => "published passage",
         _ => "canary string",
     }
 }
 
 fn build_prompt(canary: &Canary, strategy: &str) -> String {
+    if canary.family == "corpus" {
+        return corpus::corpus_prompt(canary, strategy);
+    }
     let env = canary
         .env_names
         .first()
@@ -355,13 +418,19 @@ fn scan_text(state: State<AppState>, req: ScanRequest) -> Result<Vec<ScanHit>, S
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut hits = Vec::new();
     for c in &db.canaries {
-        let matched = canary::detect(&req.text, &c.value, &c.needles, "");
+        let matched = if c.family == "corpus" {
+            corpus::detect_passage(&req.text, c, "")
+        } else {
+            canary::detect(&req.text, &c.value, &c.needles, "")
+        };
         if !matched.is_empty() {
             hits.push(ScanHit {
                 canary_id: c.id.clone(),
                 kind: c.kind_name.clone(),
                 label: c.label.clone(),
                 matched,
+                citation: citation_for(c),
+                sensitivity: provenance::sensitivity_for(c).as_str().into(),
             });
         }
     }
@@ -388,32 +457,7 @@ fn web_prompts(state: State<AppState>, canary_ids: Vec<String>) -> Result<Vec<We
 #[tauri::command]
 fn export_report(state: State<AppState>, path: String) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut md = String::from("# LLM Canary evidence report\n\n");
-    md.push_str(&format!("Generated: {}\n\n", now()));
-    let hits: Vec<&Probe> = db.probes.iter().filter(|p| p.hit).collect();
-    md.push_str(&format!(
-        "Planted canaries: {}\nProbes: {}\nHits: {}\n\n",
-        db.canaries.len(),
-        db.probes.len(),
-        hits.len()
-    ));
-    if hits.is_empty() {
-        md.push_str("No regurgitations recorded yet.\n");
-    }
-    for p in hits {
-        md.push_str(&format!(
-            "## HIT — {} / {}\n\n- When: {}\n- Canary: {} ({})\n- Strategy: {}\n- Matched: {}\n\n### Prompt\n\n```\n{}\n```\n\n### Response\n\n```\n{}\n```\n\n",
-            p.provider_name,
-            p.model,
-            p.at,
-            p.canary_label,
-            p.canary_kind,
-            p.strategy,
-            p.matched.join(", "),
-            p.prompt,
-            p.response
-        ));
-    }
+    let md = provenance::render_provenance_markdown(&db.canaries, &db.probes, &now());
     fs::write(&path, md).map_err(|e| e.to_string())
 }
 
@@ -438,6 +482,8 @@ pub fn run() {
             load_snapshot,
             save_provider,
             plant_canaries,
+            ingest_corpus,
+            load_public_domain_pack,
             delete_canary,
             fetch_models,
             test_provider,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-09-01
+
+### Training provenance answers
+- **Answers** view (formerly Hits) shows per-model provenance: which **private / unique** sources vs **public / expected** sources each lab can reproduce.
+- Export is a **training provenance report** — answers by model, source ledger, then raw evidence.
+- New **Probe** tab: import a file, folder, or pasted document; extract distinctive passages; hunt models against them with citations.
+- Built-in **public-domain pack** for calibration: Moby-Dick, Pride and Prejudice, Alice, Frankenstein, Sherlock, A Christmas Carol, The Time Machine.
+- Product framing: cut through public-vs-private training noise with cited membership evidence for the sources you load or plant.
+
 ## 0.2.0 — 2026-09-01
 
 ### Training-data flags

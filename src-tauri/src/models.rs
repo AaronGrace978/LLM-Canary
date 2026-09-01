@@ -27,6 +27,12 @@ pub struct Canary {
     pub planted_at: String,
     #[serde(default = "default_secret_family")]
     pub family: String,
+    #[serde(default)]
+    pub source_title: String,
+    #[serde(default)]
+    pub source_locator: String,
+    #[serde(default = "default_planted_source")]
+    pub source_kind: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +69,10 @@ pub struct Probe {
     pub hit: bool,
     pub matched: Vec<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub citation: String,
+    #[serde(default)]
+    pub sensitivity: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,6 +91,27 @@ pub struct Snapshot {
     pub probes: Vec<Probe>,
     pub kinds: Vec<KindInfo>,
     pub hits: usize,
+    #[serde(default)]
+    pub provenance: ProvenanceSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvenanceSummary {
+    pub answers: Vec<ProvenanceAnswer>,
+    pub private_hits: usize,
+    pub public_hits: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvenanceAnswer {
+    pub provider_name: String,
+    pub model: String,
+    pub public_sources: Vec<String>,
+    pub private_sources: Vec<String>,
+    pub public_hits: usize,
+    pub private_hits: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -92,6 +123,27 @@ pub struct PlantRequest {
     pub density: String,
     #[serde(default)]
     pub custom_tokens: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestRequest {
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub text: String,
+    #[serde(default)]
+    pub max_passages: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestResult {
+    pub canaries: Vec<Canary>,
+    pub works: usize,
+    pub skipped: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -151,6 +203,10 @@ pub struct ScanHit {
     pub kind: String,
     pub label: String,
     pub matched: Vec<String>,
+    #[serde(default)]
+    pub citation: String,
+    #[serde(default)]
+    pub sensitivity: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -183,6 +239,10 @@ fn default_secret_family() -> String {
     "secret".into()
 }
 
+fn default_planted_source() -> String {
+    "planted".into()
+}
+
 pub fn family_name(family: &str) -> &'static str {
     match family {
         "secret" => "Secrets",
@@ -191,7 +251,22 @@ pub fn family_name(family: &str) -> &'static str {
         "data" => "Datasets",
         "identity" => "Identity",
         "custom" => "Custom",
+        "corpus" => "Corpus",
         _ => "Other",
+    }
+}
+
+pub fn citation_for(canary: &Canary) -> String {
+    let title = if canary.source_title.trim().is_empty() {
+        canary.label.as_str()
+    } else {
+        canary.source_title.as_str()
+    };
+    let loc = canary.source_locator.trim();
+    if loc.is_empty() {
+        title.to_string()
+    } else {
+        format!("{title} · {loc}")
     }
 }
 

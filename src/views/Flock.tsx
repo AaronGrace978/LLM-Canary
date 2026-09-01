@@ -1,7 +1,7 @@
 import { openPath } from "@tauri-apps/plugin-opener";
 import { deleteCanary } from "../api";
 import type { Snapshot } from "../types";
-import { copyText, maskSecret, timeAgo, familyLabel } from "../util";
+import { copyText, maskSecret, timeAgo, familyLabel, citationFor } from "../util";
 import { useState } from "react";
 
 export function Flock({
@@ -27,8 +27,8 @@ export function Flock({
         <p className="eyebrow">The ledger</p>
         <h1>Flock</h1>
         <p className="lede tight">
-          Every unique value we planted — secrets, code, docs, datasets, identities, custom flags.
-          Keep this list off Git — it lives in app data, not the repo.
+          Every unique value we planted or ingested — secrets, code, docs, datasets, identities,
+          custom flags, and corpus passages. Keep this list off Git.
         </p>
       </header>
 
@@ -43,6 +43,7 @@ export function Flock({
               <tr>
                 <th>Kind</th>
                 <th>Family</th>
+                <th>Source</th>
                 <th>Value</th>
                 <th>Label</th>
                 <th>Repo</th>
@@ -55,14 +56,19 @@ export function Flock({
                 <tr key={c.id}>
                   <td>{c.kindName}</td>
                   <td>{familyLabel(c.family)}</td>
+                  <td>{citationFor(c)}</td>
                   <td>
                     <code className="secret">{maskSecret(c.value, reveal)}</code>
                   </td>
                   <td>{c.label}</td>
                   <td>
-                    <button className="linkish" onClick={() => openPath(c.repoPath)}>
-                      {c.repoName}
-                    </button>
+                    {c.repoPath && c.repoPath !== "public-domain" && c.sourceKind !== "public_domain" ? (
+                      <button className="linkish" onClick={() => openPath(c.repoPath)}>
+                        {c.repoName}
+                      </button>
+                    ) : (
+                      <span>{c.repoName}</span>
+                    )}
                   </td>
                   <td>{timeAgo(c.plantedAt)}</td>
                   <td className="actions">

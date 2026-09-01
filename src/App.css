@@ -448,6 +448,66 @@ main {
   color: white;
 }
 
+.pill.public {
+  background: rgba(143, 209, 138, 0.2);
+  color: var(--ok);
+  border: 1px solid rgba(143, 209, 138, 0.35);
+}
+
+.pill.private {
+  background: rgba(226, 75, 59, 0.16);
+  color: var(--hit);
+  border: 1px solid rgba(226, 75, 59, 0.35);
+}
+
+.answer-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.answer-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #0c0b09;
+}
+
+.answer-card.is-private {
+  border-color: rgba(226, 75, 59, 0.4);
+}
+
+.answer-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.answer-card header em {
+  color: var(--ink-dim);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.answer-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.answer-cols ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.section-title {
+  margin: 8px 0 0;
+  font-size: 16px;
+}
+
 .field {
   width: 100%;
   background: #0c0b09;
@@ -868,6 +928,12 @@ pre {
   color: var(--hit);
 }
 
+.citation {
+  font-size: 13px;
+  color: var(--canary-2);
+  margin: 8px 0 4px;
+}
+
 .hit-banner {
   color: var(--hit);
   font-weight: 600;
@@ -925,7 +991,8 @@ pre {
 @media (max-width: 1180px) {
   .stats,
   .cages,
-  .split {
+  .split,
+  .answer-cols {
     grid-template-columns: 1fr;
   }
   .hero {

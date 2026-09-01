@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { runHunt, webPrompts } from "../api";
 import type { HuntProgress, Snapshot, WebPrompt } from "../types";
-import { copyText, familyLabel } from "../util";
+import { copyText, citationFor, familyLabel } from "../util";
 
 export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   const armed = snap.providers.filter(
@@ -71,9 +71,9 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
         <p className="eyebrow">Membership test</p>
         <h1>Hunt</h1>
         <p className="lede tight">
-          We never send the full canary. Prefix, recall, and needle probes work for secrets, code,
-          docs, datasets, and custom flags. If the unique remainder comes back, that provider
-          trained on your repo.
+          We never send the full canary. Prefix, recall, and needle probes work for planted bait
+          and for corpus passages. If the remainder comes back, Hits cites the work — your repo,
+          a public-domain book, or a file you imported.
         </p>
       </header>
 
@@ -95,7 +95,7 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
                     <span>
                       {c.kindName}
                       <em>
-                        {familyLabel(c.family)} · {c.label} · {c.repoName}
+                        {familyLabel(c.family)} · {citationFor(c)}
                       </em>
                     </span>
                   </label>

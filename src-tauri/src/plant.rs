@@ -66,7 +66,9 @@ pub fn plant(req: PlantRequest) -> Result<PlantResult, String> {
     let file_rels: Vec<String> = written.iter().map(|f| f.rel.clone()).collect();
     let canaries: Vec<Canary> = secrets
         .into_iter()
-        .map(|s| Canary {
+        .map(|s| {
+            let locator = s.env_names.first().cloned().unwrap_or_default();
+            Canary {
             id: canary_id(),
             kind: s.kind,
             kind_name: s.kind_name,
@@ -79,6 +81,10 @@ pub fn plant(req: PlantRequest) -> Result<PlantResult, String> {
             repo_name: repo_name.clone(),
             files: file_rels.clone(),
             planted_at: planted_at.clone(),
+            source_title: label.clone(),
+            source_locator: locator,
+            source_kind: "planted".into(),
+        }
         })
         .collect();
 
