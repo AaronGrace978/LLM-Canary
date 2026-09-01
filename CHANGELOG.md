@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-09-01
+
+### Installers
+- GitHub Actions Release workflow builds and uploads Windows (`.msi`/`.exe`), Linux (`.AppImage`/`.deb`, Steam Deck friendly), and macOS (Apple Silicon + Intel) installers to the GitHub Release.
+
+
 ## 0.3.0 — 2026-09-01
 
 ### Training provenance answers
