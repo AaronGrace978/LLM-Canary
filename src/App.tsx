@@ -7,6 +7,7 @@ import { TABS } from "./types";
 import { Mine } from "./views/Mine";
 import { Plant } from "./views/Plant";
 import { Probe } from "./views/Probe";
+import { Chat } from "./views/Chat";
 import { Hunt } from "./views/Hunt";
 import { Flock } from "./views/Flock";
 import { Hits } from "./views/Hits";
@@ -49,10 +50,11 @@ export default function App() {
         "1": "mine",
         "2": "plant",
         "3": "probe",
-        "4": "hunt",
-        "5": "flock",
-        "6": "hits",
-        "7": "cages",
+        "4": "chat",
+        "5": "hunt",
+        "6": "flock",
+        "7": "hits",
+        "8": "cages",
       };
       if (map[e.key]) setTab(map[e.key]);
     };
@@ -126,6 +128,7 @@ export default function App() {
           {snap && tab === "mine" && <Mine snap={snap} go={setTab} />}
           {snap && tab === "plant" && <Plant snap={snap} onDone={reload} />}
           {snap && tab === "probe" && <Probe snap={snap} onDone={reload} />}
+          {snap && tab === "chat" && <Chat snap={snap} onDone={reload} />}
           {snap && tab === "hunt" && <Hunt snap={snap} onDone={reload} />}
           {snap && tab === "flock" && <Flock snap={snap} reveal={reveal} onDone={reload} />}
           {snap && tab === "hits" && <Hits snap={snap} onDone={reload} />}

@@ -13,6 +13,8 @@ Desktop app (Tauri 2). If they trained on it, the bird sings.
 ## What you get
 
 - **Answers by model** — which public sources and which private / unique sources each provider can reproduce
+- **Chat interrogation** — question models (including GLM) about where knowledge came from; scan replies for regurgitated sources
+- **GitHub linking** — watch a repo’s distinctive passages as membership bait
 - **Citations** — work title, locator, and the lab that sang
 - **Calibration vs smoking gun** — famous public-domain hits are expected; your private wiki, dataset, or planted canary is the evidence
 - **Exportable provenance report** — markdown for legal / security
@@ -56,9 +58,10 @@ Download them from the [Releases](https://github.com/AaronGrace978/LLM-Canary/re
 ## Use
 
 1. **Cages** — paste API keys for Ollama Cloud, OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, xAI, or any OpenAI-compatible endpoint. Fetch models, pick one, Test.
-2. **Probe** — import a file/folder or paste text from the sources you want answers about. Or load the **public-domain pack** (Moby-Dick, Pride and Prejudice, Alice, Frankenstein, Sherlock, A Christmas Carol, The Time Machine) as a baseline. Copyrighted books are not shipped; import your own copy if you have the right to probe it.
-3. **Plant** — optional unique bait in your repos (secrets, code watermarks, phrases, dataset rows, identities, custom flags).
-4. **Hunt** — prefix / recall / needle against every watched source.
-5. **Answers** — per-model provenance: private vs public sources, citations, raw evidence, exportable report.
+2. **Probe** — import a file/folder, paste text, or **link a GitHub repo**. Or load the **public-domain pack** as a baseline.
+3. **Chat** — question a model about its training. Fish prompts push for sources and verbatim recall; replies that regurgitate watched material become Answers.
+4. **Plant** — optional unique bait in your repos (secrets, code watermarks, phrases, dataset rows, identities, custom flags).
+5. **Hunt** — automated prefix / recall / needle probes against every watched source.
+6. **Answers** — per-model provenance: private vs public sources, citations, raw evidence, exportable report.
 
 Keys live in the app data directory. They are sent only to the provider you configured.

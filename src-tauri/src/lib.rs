@@ -1,5 +1,6 @@
 mod canary;
 mod corpus;
+mod github;
 mod models;
 mod plant;
 mod provenance;
@@ -51,6 +52,8 @@ fn snapshot_from(db: &Db) -> Snapshot {
         kinds: kinds_catalog(),
         hits,
         provenance,
+        linked_repos: db.linked_repos.clone(),
+        has_github_token: !db.github_token.trim().is_empty(),
     }
 }
 
@@ -461,6 +464,164 @@ fn export_report(state: State<AppState>, path: String) -> Result<(), String> {
     fs::write(&path, md).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn chat_turn(
+    state: State<'_, AppState>,
+    req: ChatTurnRequest,
+) -> Result<ChatTurnResult, String> {
+    let provider = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.providers
+            .iter()
+            .find(|p| p.id == req.provider_id)
+            .cloned()
+            .ok_or_else(|| "Unknown provider. Arm a cage first.".to_string())?
+    };
+    if req.messages.is_empty() {
+        return Err("Type a question first.".into());
+    }
+    let last_user = req
+        .messages
+        .iter()
+        .rev()
+        .find(|m| m.role == "user")
+        .map(|m| m.content.clone())
+        .unwrap_or_default();
+
+    let reply = providers::chat_messages(&state.http, &provider, &req.messages).await?;
+
+    let canaries = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.canaries.clone()
+    };
+
+    let mut hits = Vec::new();
+    let mut probes = Vec::new();
+    for c in &canaries {
+        let matched = if c.family == "corpus" {
+            corpus::detect_passage(&reply, c, &last_user)
+        } else {
+            canary::detect(&reply, &c.value, &c.needles, &last_user)
+        };
+        if matched.is_empty() {
+            continue;
+        }
+        hits.push(ChatHit {
+            canary_id: c.id.clone(),
+            kind: c.kind_name.clone(),
+            label: c.label.clone(),
+            matched: matched.clone(),
+            citation: citation_for(c),
+            sensitivity: provenance::sensitivity_for(c).as_str().into(),
+        });
+        probes.push(Probe {
+            id: new_id("probe"),
+            at: now(),
+            provider_id: provider.id.clone(),
+            provider_name: provider.name.clone(),
+            model: provider.model.clone(),
+            canary_id: c.id.clone(),
+            canary_kind: c.kind_name.clone(),
+            canary_label: c.label.clone(),
+            strategy: "chat".into(),
+            prompt: last_user.clone(),
+            response: reply.clone(),
+            hit: true,
+            matched,
+            error: None,
+            citation: citation_for(c),
+            sensitivity: provenance::sensitivity_for(c).as_str().into(),
+        });
+    }
+
+    let recorded = probes.len();
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        if let Some(p) = db.providers.iter_mut().find(|p| p.id == provider.id) {
+            providers::mark_ok(p);
+        }
+        if !probes.is_empty() {
+            db.probes.extend(probes);
+            if db.probes.len() > 800 {
+                let extra = db.probes.len() - 800;
+                db.probes.drain(0..extra);
+            }
+        }
+    }
+    persist(&state)?;
+
+    Ok(ChatTurnResult {
+        reply,
+        hits,
+        probes_recorded: recorded,
+    })
+}
+
+#[tauri::command]
+async fn link_github_repo(
+    state: State<'_, AppState>,
+    req: LinkGithubRequest,
+) -> Result<LinkGithubResult, String> {
+    let token = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        if !req.token.trim().is_empty() {
+            req.token.clone()
+        } else {
+            db.github_token.clone()
+        }
+    };
+    let (linked, ingest) =
+        github::link_and_ingest(&state.http, &req.url, &token, req.max_passages).await?;
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        if req.save_token && !req.token.trim().is_empty() {
+            db.github_token = req.token.trim().to_string();
+        }
+        db.linked_repos
+            .retain(|r| !(r.owner == linked.owner && r.name == linked.name));
+        db.linked_repos.insert(0, linked.clone());
+        if db.linked_repos.len() > 40 {
+            db.linked_repos.truncate(40);
+        }
+        db.canaries.extend(ingest.canaries.clone());
+    }
+    persist(&state)?;
+    Ok(LinkGithubResult {
+        linked,
+        canaries: ingest.canaries,
+        works: ingest.works,
+        skipped: ingest.skipped,
+    })
+}
+
+#[tauri::command]
+fn unlink_github_repo(state: State<AppState>, id: String) -> Result<Snapshot, String> {
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        let Some(repo) = db.linked_repos.iter().find(|r| r.id == id).cloned() else {
+            return Err("Unknown linked repo.".into());
+        };
+        let title = format!("{}/{}", repo.owner, repo.name);
+        db.canaries.retain(|c| {
+            !(c.source_kind == "github"
+                && (c.source_title == title || c.repo_path == repo.url || c.label == title))
+        });
+        db.linked_repos.retain(|r| r.id != id);
+    }
+    persist(&state)?;
+    load_snapshot(state)
+}
+
+#[tauri::command]
+fn save_github_token(state: State<AppState>, token: String) -> Result<Snapshot, String> {
+    {
+        let mut db = state.db.lock().map_err(|e| e.to_string())?;
+        db.github_token = token.trim().to_string();
+    }
+    persist(&state)?;
+    load_snapshot(state)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -490,7 +651,11 @@ pub fn run() {
             run_hunt,
             scan_text,
             web_prompts,
-            export_report
+            export_report,
+            chat_turn,
+            link_github_repo,
+            unlink_github_repo,
+            save_github_token
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
