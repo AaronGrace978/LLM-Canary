@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::models::{merge_providers, Db};
+use crate::secrets;
 
 pub fn db_path(dir: &Path) -> PathBuf {
     dir.join("db.json")
@@ -18,14 +19,17 @@ pub fn load(dir: &Path) -> Db {
         empty_db()
     };
     merge_providers(&mut db.providers);
+    secrets::hydrate(&mut db);
     db
 }
 
 pub fn save(dir: &Path, db: &Db) -> Result<(), String> {
+    secrets::persist_secrets(db)?;
     fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let path = db_path(dir);
     let tmp = dir.join("db.json.tmp");
-    let bytes = serde_json::to_vec_pretty(db).map_err(|e| e.to_string())?;
+    let disk = secrets::strip_for_disk(db);
+    let bytes = serde_json::to_vec_pretty(&disk).map_err(|e| e.to_string())?;
     fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
     fs::rename(&tmp, path).map_err(|e| e.to_string())
 }

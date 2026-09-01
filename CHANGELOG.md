@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 — 2026-09-01
+
+### Secret storage
+- Provider API keys and the optional GitHub token are no longer written into `db.json`.
+- Secrets live in the OS credential store: Windows Credential Manager, macOS Keychain, Linux Secret Service.
+- Existing plaintext keys in `db.json` are migrated into the vault on next launch, then wiped from disk.
+
 ## 0.4.0 — 2026-09-01
 
 ### Chat — question models about training

@@ -5,6 +5,7 @@ mod models;
 mod plant;
 mod provenance;
 mod providers;
+mod secrets;
 mod store;
 
 use std::fs;

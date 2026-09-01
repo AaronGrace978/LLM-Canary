@@ -64,4 +64,4 @@ Download them from the [Releases](https://github.com/AaronGrace978/LLM-Canary/re
 5. **Hunt** — automated prefix / recall / needle probes against every watched source.
 6. **Answers** — per-model provenance: private vs public sources, citations, raw evidence, exportable report.
 
-Keys live in the app data directory. They are sent only to the provider you configured.
+Keys live in the OS credential store (Windows Credential Manager, macOS Keychain, Linux Secret Service). They are sent only to the provider you configured.
