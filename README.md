@@ -40,6 +40,19 @@ npm run tauri dev
 npm run tauri build
 ```
 
+## Installers
+
+GitHub Actions builds desktop installers on each `v*` tag (and via the Release workflow):
+
+| Platform | Artifact |
+| --- | --- |
+| Windows | `.msi` / NSIS `.exe` |
+| Linux (incl. Steam Deck) | `.AppImage` / `.deb` |
+| macOS Apple Silicon | `aarch64` `.dmg` |
+| macOS Intel | `x86_64` `.dmg` |
+
+Download them from the [Releases](https://github.com/AaronGrace978/LLM-Canary/releases) page. Steam store packaging is separate from these desktop builds.
+
 ## Use
 
 1. **Cages** — paste API keys for Ollama Cloud, OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, xAI, or any OpenAI-compatible endpoint. Fetch models, pick one, Test.
