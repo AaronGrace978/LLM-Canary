@@ -45,11 +45,11 @@ export function Mine({
             private — for each model.
           </p>
           <div className="hero-actions">
-            <button className="btn primary" onClick={() => go("probe")}>
-              Probe sources
+            <button className="btn primary" onClick={() => go("chat")}>
+              Chat with a model
             </button>
-            <button className="btn ghost" onClick={() => go("plant")}>
-              Plant canaries
+            <button className="btn ghost" onClick={() => go("probe")}>
+              Probe / link GitHub
             </button>
             <button className="btn ghost" onClick={() => go("hits")}>
               See answers
@@ -75,16 +75,15 @@ export function Mine({
           <h2>How you get answers</h2>
           <ol className="steps">
             <li>
-              <b>Probe</b> the corpora you care about — private wikis, datasets, manuscripts — and
-              load the public-domain pack as a baseline.
+              <b>Probe</b> sources — link a GitHub repo, import files, or load the public-domain pack.
             </li>
             <li>
-              <b>Plant</b> unique canaries in your own repos if you want bait that never existed
-              before you minted it.
+              <b>Chat</b> with a cage (GLM, Claude, GPT…) and fish it for where its knowledge came
+              from. Replies that regurgitate watched sources become Answers.
             </li>
             <li>
-              <b>Hunt</b> each model. <b>Answers</b> tells you which public vs private sources that
-              model can reproduce, with citations.
+              <b>Hunt</b> for automated membership tests. <b>Plant</b> unique canaries when you want
+              bait that never existed before you minted it.
             </li>
           </ol>
         </section>

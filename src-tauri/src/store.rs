@@ -35,5 +35,7 @@ fn empty_db() -> Db {
         canaries: vec![],
         providers: crate::models::default_providers(),
         probes: vec![],
+        linked_repos: vec![],
+        github_token: String::new(),
     }
 }

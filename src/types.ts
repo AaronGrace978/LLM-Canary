@@ -74,6 +74,17 @@ export type ProvenanceSummary = {
   publicHits: number;
 };
 
+export type LinkedRepo = {
+  id: string;
+  url: string;
+  owner: string;
+  name: string;
+  defaultBranch: string;
+  description: string;
+  linkedAt: string;
+  files: string[];
+};
+
 export type Snapshot = {
   canaries: Canary[];
   providers: Provider[];
@@ -81,6 +92,8 @@ export type Snapshot = {
   kinds: KindInfo[];
   hits: number;
   provenance?: ProvenanceSummary;
+  linkedRepos?: LinkedRepo[];
+  hasGithubToken?: boolean;
 };
 
 export type PlantResult = {
@@ -126,12 +139,40 @@ export type IngestResult = {
   skipped: number;
 };
 
-export type Tab = "mine" | "plant" | "probe" | "hunt" | "flock" | "hits" | "cages";
+export type ChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+export type ChatHit = {
+  canaryId: string;
+  kind: string;
+  label: string;
+  matched: string[];
+  citation: string;
+  sensitivity: string;
+};
+
+export type ChatTurnResult = {
+  reply: string;
+  hits: ChatHit[];
+  probesRecorded: number;
+};
+
+export type LinkGithubResult = {
+  linked: LinkedRepo;
+  canaries: Canary[];
+  works: number;
+  skipped: number;
+};
+
+export type Tab = "mine" | "plant" | "probe" | "chat" | "hunt" | "flock" | "hits" | "cages";
 
 export const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "mine", label: "Mine", hint: "Overview" },
   { id: "plant", label: "Plant", hint: "Drop canaries" },
   { id: "probe", label: "Probe", hint: "Cite a corpus" },
+  { id: "chat", label: "Chat", hint: "Question models" },
   { id: "hunt", label: "Hunt", hint: "Ask models" },
   { id: "flock", label: "Flock", hint: "Planted tokens" },
   { id: "hits", label: "Answers", hint: "Provenance" },

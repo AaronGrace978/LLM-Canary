@@ -1,12 +1,12 @@
 use serde_json::{json, Value};
 use std::time::Duration;
 
-use crate::models::{fallback_models, now, Provider, TestResult};
+use crate::models::{fallback_models, now, ChatMessage, Provider, TestResult};
 
 fn client() -> reqwest::Client {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(90))
-        .user_agent("LLM-Canary/0.1")
+        .user_agent("LLM-Canary/0.4")
         .build()
         .expect("http client")
 }
@@ -16,15 +16,34 @@ pub fn http() -> reqwest::Client {
 }
 
 pub async fn chat(http: &reqwest::Client, p: &Provider, prompt: &str) -> Result<String, String> {
+    chat_messages(
+        http,
+        p,
+        &[ChatMessage {
+            role: "user".into(),
+            content: prompt.to_string(),
+        }],
+    )
+    .await
+}
+
+pub async fn chat_messages(
+    http: &reqwest::Client,
+    p: &Provider,
+    messages: &[ChatMessage],
+) -> Result<String, String> {
     if p.model.trim().is_empty() {
         return Err("Pick a model first.".into());
     }
+    if messages.is_empty() {
+        return Err("Nothing to send.".into());
+    }
     match p.kind.as_str() {
-        "ollama" => ollama_chat(http, p, prompt).await,
-        "openai" => openai_chat(http, p, prompt, false).await,
-        "anthropic" => anthropic_chat(http, p, prompt).await,
-        "gemini" => gemini_chat(http, p, prompt).await,
-        _ => openai_compat_chat(http, p, prompt).await,
+        "ollama" => ollama_chat(http, p, messages).await,
+        "openai" => openai_chat(http, p, messages, false).await,
+        "anthropic" => anthropic_chat(http, p, messages).await,
+        "gemini" => gemini_chat(http, p, messages).await,
+        _ => openai_compat_chat(http, p, messages).await,
     }
 }
 
@@ -82,12 +101,33 @@ fn require_key(p: &Provider) -> Result<(), String> {
     }
 }
 
-async fn ollama_chat(http: &reqwest::Client, p: &Provider, prompt: &str) -> Result<String, String> {
+fn openai_style_messages(messages: &[ChatMessage]) -> Value {
+    let arr: Vec<Value> = messages
+        .iter()
+        .filter(|m| {
+            let role = m.role.trim();
+            (role == "user" || role == "assistant" || role == "system") && !m.content.trim().is_empty()
+        })
+        .map(|m| {
+            json!({
+                "role": m.role.trim(),
+                "content": m.content.clone(),
+            })
+        })
+        .collect();
+    Value::Array(arr)
+}
+
+async fn ollama_chat(
+    http: &reqwest::Client,
+    p: &Provider,
+    messages: &[ChatMessage],
+) -> Result<String, String> {
     require_key(p)?;
     let url = format!("{}/api/chat", p.base_url.trim_end_matches('/'));
     let mut req = http.post(&url).json(&json!({
         "model": p.model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": openai_style_messages(messages),
         "stream": false
     }));
     if !p.api_key.trim().is_empty() {
@@ -122,7 +162,7 @@ async fn ollama_models(http: &reqwest::Client, p: &Provider) -> Result<Vec<Strin
 async fn openai_chat(
     http: &reqwest::Client,
     p: &Provider,
-    prompt: &str,
+    messages: &[ChatMessage],
     completion_tokens: bool,
 ) -> Result<String, String> {
     require_key(p)?;
@@ -133,13 +173,13 @@ async fn openai_chat(
         || p.model.starts_with("o3");
     let mut body = json!({
         "model": p.model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": openai_style_messages(messages),
     });
     if use_completion {
-        body["max_completion_tokens"] = json!(800);
+        body["max_completion_tokens"] = json!(1600);
     } else {
-        body["max_tokens"] = json!(800);
-        body["temperature"] = json!(0);
+        body["max_tokens"] = json!(1600);
+        body["temperature"] = json!(0.2);
     }
     let req = http
         .post(&url)
@@ -151,27 +191,12 @@ async fn openai_chat(
             if !use_completion
                 && (e.contains("max_completion_tokens") || e.contains("unsupported_parameter"))
             {
-                openai_chat_completion_tokens(http, p, prompt).await
+                Box::pin(openai_chat(http, p, messages, true)).await
             } else {
                 Err(e)
             }
         }
     }
-}
-
-async fn openai_chat_completion_tokens(
-    http: &reqwest::Client,
-    p: &Provider,
-    prompt: &str,
-) -> Result<String, String> {
-    let url = format!("{}/chat/completions", p.base_url.trim_end_matches('/'));
-    let body = json!({
-        "model": p.model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_completion_tokens": 800
-    });
-    let v = send(http.post(&url).bearer_auth(p.api_key.trim()).json(&body)).await?;
-    openai_content(&v)
 }
 
 fn openai_content(v: &Value) -> Result<String, String> {
@@ -222,7 +247,7 @@ async fn openai_models(http: &reqwest::Client, p: &Provider) -> Result<Vec<Strin
 async fn openai_compat_chat(
     http: &reqwest::Client,
     p: &Provider,
-    prompt: &str,
+    messages: &[ChatMessage],
 ) -> Result<String, String> {
     require_key(p)?;
     let base = p.base_url.trim_end_matches('/');
@@ -233,9 +258,9 @@ async fn openai_compat_chat(
     };
     let body = json!({
         "model": p.model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 800,
-        "temperature": 0
+        "messages": openai_style_messages(messages),
+        "max_tokens": 1600,
+        "temperature": 0.2
     });
     let mut req = http.post(&url).json(&body);
     if !p.api_key.trim().is_empty() {
@@ -290,19 +315,51 @@ async fn openai_compat_models(http: &reqwest::Client, p: &Provider) -> Result<Ve
 async fn anthropic_chat(
     http: &reqwest::Client,
     p: &Provider,
-    prompt: &str,
+    messages: &[ChatMessage],
 ) -> Result<String, String> {
     require_key(p)?;
     let url = format!("{}/v1/messages", p.base_url.trim_end_matches('/'));
+    let mut system = String::new();
+    let mut api_messages: Vec<Value> = Vec::new();
+    for m in messages {
+        let role = m.role.trim();
+        if role == "system" {
+            if !system.is_empty() {
+                system.push('\n');
+            }
+            system.push_str(&m.content);
+            continue;
+        }
+        let mapped = if role == "assistant" { "assistant" } else { "user" };
+        if let Some(last) = api_messages.last_mut() {
+            let last_role = last["role"].as_str().unwrap_or("");
+            if last_role == mapped {
+                let existing = last["content"].as_str().unwrap_or("").to_string();
+                last["content"] = json!(format!("{existing}\n\n{}", m.content));
+                continue;
+            }
+        }
+        api_messages.push(json!({
+            "role": mapped,
+            "content": m.content.clone(),
+        }));
+    }
+    if api_messages.is_empty() {
+        return Err("Nothing to send.".into());
+    }
+    let mut body = json!({
+        "model": p.model,
+        "max_tokens": 1600,
+        "messages": api_messages
+    });
+    if !system.trim().is_empty() {
+        body["system"] = json!(system);
+    }
     let req = http
         .post(&url)
         .header("x-api-key", p.api_key.trim())
         .header("anthropic-version", "2023-06-01")
-        .json(&json!({
-            "model": p.model,
-            "max_tokens": 800,
-            "messages": [{"role": "user", "content": prompt}]
-        }));
+        .json(&body);
     let v = send(req).await?;
     if let Some(arr) = v.get("content").and_then(|x| x.as_array()) {
         let mut text = String::new();
@@ -340,7 +397,11 @@ async fn anthropic_models(http: &reqwest::Client, p: &Provider) -> Result<Vec<St
     Ok(out)
 }
 
-async fn gemini_chat(http: &reqwest::Client, p: &Provider, prompt: &str) -> Result<String, String> {
+async fn gemini_chat(
+    http: &reqwest::Client,
+    p: &Provider,
+    messages: &[ChatMessage],
+) -> Result<String, String> {
     require_key(p)?;
     let model = p.model.trim().trim_start_matches("models/");
     let url = format!(
@@ -349,10 +410,36 @@ async fn gemini_chat(http: &reqwest::Client, p: &Provider, prompt: &str) -> Resu
         model,
         urlencoding_lite(p.api_key.trim())
     );
-    let req = http.post(&url).json(&json!({
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 800, "temperature": 0}
-    }));
+    let mut contents = Vec::new();
+    let mut system = String::new();
+    for m in messages {
+        let role = m.role.trim();
+        if role == "system" {
+            if !system.is_empty() {
+                system.push('\n');
+            }
+            system.push_str(&m.content);
+            continue;
+        }
+        let mapped = if role == "assistant" { "model" } else { "user" };
+        contents.push(json!({
+            "role": mapped,
+            "parts": [{"text": m.content.clone()}]
+        }));
+    }
+    if contents.is_empty() {
+        return Err("Nothing to send.".into());
+    }
+    let mut body = json!({
+        "contents": contents,
+        "generationConfig": {"maxOutputTokens": 1600, "temperature": 0.2}
+    });
+    if !system.trim().is_empty() {
+        body["systemInstruction"] = json!({
+            "parts": [{"text": system}]
+        });
+    }
+    let req = http.post(&url).json(&body);
     let v = send(req).await?;
     if let Some(cands) = v.get("candidates").and_then(|x| x.as_array()) {
         if let Some(parts) = cands

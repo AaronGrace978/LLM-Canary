@@ -77,10 +77,29 @@ pub struct Probe {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LinkedRepo {
+    pub id: String,
+    pub url: String,
+    pub owner: String,
+    pub name: String,
+    pub default_branch: String,
+    #[serde(default)]
+    pub description: String,
+    pub linked_at: String,
+    #[serde(default)]
+    pub files: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Db {
     pub canaries: Vec<Canary>,
     pub providers: Vec<Provider>,
     pub probes: Vec<Probe>,
+    #[serde(default)]
+    pub linked_repos: Vec<LinkedRepo>,
+    #[serde(default)]
+    pub github_token: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +112,10 @@ pub struct Snapshot {
     pub hits: usize,
     #[serde(default)]
     pub provenance: ProvenanceSummary,
+    #[serde(default)]
+    pub linked_repos: Vec<LinkedRepo>,
+    #[serde(default)]
+    pub has_github_token: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -136,6 +159,60 @@ pub struct IngestRequest {
     pub text: String,
     #[serde(default)]
     pub max_passages: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatTurnRequest {
+    pub provider_id: String,
+    pub messages: Vec<ChatMessage>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatHit {
+    pub canary_id: String,
+    pub kind: String,
+    pub label: String,
+    pub matched: Vec<String>,
+    pub citation: String,
+    pub sensitivity: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatTurnResult {
+    pub reply: String,
+    pub hits: Vec<ChatHit>,
+    pub probes_recorded: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkGithubRequest {
+    pub url: String,
+    #[serde(default)]
+    pub token: String,
+    #[serde(default)]
+    pub max_passages: Option<usize>,
+    #[serde(default)]
+    pub save_token: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkGithubResult {
+    pub linked: LinkedRepo,
+    pub canaries: Vec<Canary>,
+    pub works: usize,
+    pub skipped: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]

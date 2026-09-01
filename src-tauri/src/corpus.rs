@@ -152,7 +152,7 @@ pub fn already_has_public_domain(existing: &[Canary]) -> bool {
         .any(|c| c.source_kind == "public_domain" || c.label == "Moby-Dick")
 }
 
-fn canaries_from_text(
+pub fn canaries_from_text(
     text: &str,
     title: &str,
     path: &str,

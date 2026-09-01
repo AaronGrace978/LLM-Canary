@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { HuntSummary, IngestResult, PlantResult, ScanHit, Snapshot, WebPrompt } from "./types";
+import type {
+  ChatMessage,
+  ChatTurnResult,
+  HuntSummary,
+  IngestResult,
+  LinkGithubResult,
+  PlantResult,
+  ScanHit,
+  Snapshot,
+  WebPrompt,
+} from "./types";
 
 export type TestResult = { ok: boolean; model: string; preview: string };
 
@@ -70,4 +80,28 @@ export async function webPrompts(canaryIds: string[]): Promise<WebPrompt[]> {
 
 export async function exportReport(path: string): Promise<void> {
   return invoke("export_report", { path });
+}
+
+export async function chatTurn(req: {
+  providerId: string;
+  messages: ChatMessage[];
+}): Promise<ChatTurnResult> {
+  return invoke("chat_turn", { req });
+}
+
+export async function linkGithubRepo(req: {
+  url: string;
+  token?: string;
+  maxPassages?: number;
+  saveToken?: boolean;
+}): Promise<LinkGithubResult> {
+  return invoke("link_github_repo", { req });
+}
+
+export async function unlinkGithubRepo(id: string): Promise<Snapshot> {
+  return invoke("unlink_github_repo", { id });
+}
+
+export async function saveGithubToken(token: string): Promise<Snapshot> {
+  return invoke("save_github_token", { token });
 }

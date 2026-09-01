@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-09-01
+
+### Chat — question models about training
+- New **Chat** tab: talk to any armed cage (GLM, Claude, GPT, etc.) and fish it for training provenance.
+- Fish prompts ask where knowledge came from and push for verbatim source recall.
+- Every reply is scanned against planted canaries and watched corpora; hits land in **Answers**.
+
+### Link GitHub repos
+- On **Probe**, paste a GitHub URL to pull README + distinctive source files and watch them as private corpus.
+- Optional GitHub token for private repos.
+- Chat adds repo-specific trap prompts for each linked repository.
+
 ## 0.3.1 — 2026-09-01
 
 ### Installers
