@@ -1,8 +1,9 @@
 [package]
 name = "llm-canary"
-version = "0.1.0"
-description = "Plant fake secrets in your repos. If an AI regurgitates them, you know who trained on your code."
-authors = ["LLM Canary"]
+version = "0.2.0"
+description = "Plant unique training-data canaries in your repos. If an AI regurgitates them, you know who trained on your data."
+authors = ["Aaron Grace <aarongrace978@gmail.com>"]
+license-file = "../LICENSE"
 edition = "2021"
 
 [lib]

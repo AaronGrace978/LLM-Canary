@@ -7,6 +7,8 @@ pub struct KindInfo {
     pub name: String,
     pub blurb: String,
     pub sample: String,
+    pub family: String,
+    pub family_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +25,8 @@ pub struct Canary {
     pub repo_name: String,
     pub files: Vec<String>,
     pub planted_at: String,
+    #[serde(default = "default_secret_family")]
+    pub family: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +90,8 @@ pub struct PlantRequest {
     pub label: String,
     pub kinds: Vec<String>,
     pub density: String,
+    #[serde(default)]
+    pub custom_tokens: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -173,74 +179,168 @@ pub struct TestResult {
     pub preview: String,
 }
 
+fn default_secret_family() -> String {
+    "secret".into()
+}
+
+pub fn family_name(family: &str) -> &'static str {
+    match family {
+        "secret" => "Secrets",
+        "code" => "Code",
+        "prose" => "Documents",
+        "data" => "Datasets",
+        "identity" => "Identity",
+        "custom" => "Custom",
+        _ => "Other",
+    }
+}
+
+fn kind(id: &str, name: &str, blurb: &str, sample: &str, family: &str) -> KindInfo {
+    KindInfo {
+        id: id.into(),
+        name: name.into(),
+        blurb: blurb.into(),
+        sample: sample.into(),
+        family: family.into(),
+        family_name: family_name(family).into(),
+    }
+}
+
 pub fn kinds_catalog() -> Vec<KindInfo> {
     vec![
-        KindInfo {
-            id: "aws".into(),
-            name: "AWS keys".into(),
-            blurb: "AKIA access key + 40-char secret".into(),
-            sample: "AKIA…  /  wJalr…".into(),
-        },
-        KindInfo {
-            id: "github".into(),
-            name: "GitHub PAT".into(),
-            blurb: "Classic ghp_ personal access token".into(),
-            sample: "ghp_…".into(),
-        },
-        KindInfo {
-            id: "openai".into(),
-            name: "OpenAI key".into(),
-            blurb: "sk-proj project key".into(),
-            sample: "sk-proj-…".into(),
-        },
-        KindInfo {
-            id: "anthropic".into(),
-            name: "Anthropic key".into(),
-            blurb: "sk-ant-api03 Claude key".into(),
-            sample: "sk-ant-…".into(),
-        },
-        KindInfo {
-            id: "stripe".into(),
-            name: "Stripe live".into(),
-            blurb: "sk_live restricted-looking key".into(),
-            sample: "sk_live_…".into(),
-        },
-        KindInfo {
-            id: "slack".into(),
-            name: "Slack webhook".into(),
-            blurb: "Incoming webhook URL".into(),
-            sample: "hooks.slack.com/…".into(),
-        },
-        KindInfo {
-            id: "postgres".into(),
-            name: "Postgres URL".into(),
-            blurb: "postgres:// user, password, host".into(),
-            sample: "postgres://…".into(),
-        },
-        KindInfo {
-            id: "huggingface".into(),
-            name: "Hugging Face".into(),
-            blurb: "hf_ user access token".into(),
-            sample: "hf_…".into(),
-        },
-        KindInfo {
-            id: "sendgrid".into(),
-            name: "SendGrid".into(),
-            blurb: "SG. API key".into(),
-            sample: "SG.…".into(),
-        },
-        KindInfo {
-            id: "npm".into(),
-            name: "npm token".into(),
-            blurb: "npm_ automation token".into(),
-            sample: "npm_…".into(),
-        },
-        KindInfo {
-            id: "private_key".into(),
-            name: "SSH private key".into(),
-            blurb: "OPENSSH private key block".into(),
-            sample: "BEGIN OPENSSH…".into(),
-        },
+        kind(
+            "aws",
+            "AWS keys",
+            "AKIA access key + 40-char secret",
+            "AKIA…  /  wJalr…",
+            "secret",
+        ),
+        kind(
+            "github",
+            "GitHub PAT",
+            "Classic ghp_ personal access token",
+            "ghp_…",
+            "secret",
+        ),
+        kind(
+            "openai",
+            "OpenAI key",
+            "sk-proj project key",
+            "sk-proj-…",
+            "secret",
+        ),
+        kind(
+            "anthropic",
+            "Anthropic key",
+            "sk-ant-api03 Claude key",
+            "sk-ant-…",
+            "secret",
+        ),
+        kind(
+            "stripe",
+            "Stripe live",
+            "sk_live restricted-looking key",
+            "sk_live_…",
+            "secret",
+        ),
+        kind(
+            "slack",
+            "Slack webhook",
+            "Incoming webhook URL",
+            "hooks.slack.com/…",
+            "secret",
+        ),
+        kind(
+            "postgres",
+            "Postgres URL",
+            "postgres:// user, password, host",
+            "postgres://…",
+            "secret",
+        ),
+        kind(
+            "huggingface",
+            "Hugging Face",
+            "hf_ user access token",
+            "hf_…",
+            "secret",
+        ),
+        kind(
+            "sendgrid",
+            "SendGrid",
+            "SG. API key",
+            "SG.…",
+            "secret",
+        ),
+        kind(
+            "npm",
+            "npm token",
+            "npm_ automation token",
+            "npm_…",
+            "secret",
+        ),
+        kind(
+            "private_key",
+            "SSH private key",
+            "OPENSSH private key block",
+            "BEGIN OPENSSH…",
+            "secret",
+        ),
+        kind(
+            "code_watermark",
+            "Code watermark",
+            "Unique function + constant that only this tree should know",
+            "velquor_wmk_…",
+            "code",
+        ),
+        kind(
+            "code_comment",
+            "Comment tag",
+            "High-entropy freeze-frame marker in source comments",
+            "CNRY-TAG-…",
+            "code",
+        ),
+        kind(
+            "doc_phrase",
+            "Doc phrase",
+            "Unique sentence in internal architecture notes",
+            "CNRY… lattice handshake",
+            "prose",
+        ),
+        kind(
+            "codename",
+            "Project codename",
+            "Fake internal proper noun trainers would memorize",
+            "Velquor-…",
+            "prose",
+        ),
+        kind(
+            "dataset_row",
+            "Dataset row",
+            "Unique CSV record id that looks like seed data",
+            "cnry_row_…",
+            "data",
+        ),
+        kind(
+            "json_record",
+            "JSON record",
+            "Unique fixture object id in a JSON dump",
+            "cnry_json_…",
+            "data",
+        ),
+        kind(
+            "canary_email",
+            "Operator email",
+            "Unique @canary.invalid address",
+            "nora.velquor…@canary.invalid",
+            "identity",
+        ),
+        kind(
+            "employee_id",
+            "Employee id",
+            "Fake staff / operator identifier",
+            "CNV-…",
+            "identity",
+        ),
     ]
 }
 

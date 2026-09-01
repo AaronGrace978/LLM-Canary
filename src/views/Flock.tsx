@@ -1,7 +1,7 @@
 import { openPath } from "@tauri-apps/plugin-opener";
 import { deleteCanary } from "../api";
 import type { Snapshot } from "../types";
-import { copyText, maskSecret, timeAgo } from "../util";
+import { copyText, maskSecret, timeAgo, familyLabel } from "../util";
 import { useState } from "react";
 
 export function Flock({
@@ -27,7 +27,8 @@ export function Flock({
         <p className="eyebrow">The ledger</p>
         <h1>Flock</h1>
         <p className="lede tight">
-          Every unique value we planted. Keep this list off Git — it lives in app data, not the repo.
+          Every unique value we planted — secrets, code, docs, datasets, identities, custom flags.
+          Keep this list off Git — it lives in app data, not the repo.
         </p>
       </header>
 
@@ -41,6 +42,7 @@ export function Flock({
             <thead>
               <tr>
                 <th>Kind</th>
+                <th>Family</th>
                 <th>Value</th>
                 <th>Label</th>
                 <th>Repo</th>
@@ -52,6 +54,7 @@ export function Flock({
               {snap.canaries.map((c) => (
                 <tr key={c.id}>
                   <td>{c.kindName}</td>
+                  <td>{familyLabel(c.family)}</td>
                   <td>
                     <code className="secret">{maskSecret(c.value, reveal)}</code>
                   </td>

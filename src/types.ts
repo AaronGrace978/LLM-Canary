@@ -3,12 +3,15 @@ export type KindInfo = {
   name: string;
   blurb: string;
   sample: string;
+  family: string;
+  familyName: string;
 };
 
 export type Canary = {
   id: string;
   kind: string;
   kindName: string;
+  family?: string;
   value: string;
   needles: string[];
   envNames: string[];

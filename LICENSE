@@ -1,0 +1,37 @@
+LLM Canary Proprietary License
+
+Copyright (c) 2026 Aaron Grace. All rights reserved.
+
+This software and associated documentation files (the "Software") are the
+exclusive property of Aaron Grace (the "Owner").
+
+1. Ownership. The Owner retains all right, title, and interest in the Software,
+   including all copyright, patent, trade secret, and other intellectual
+   property rights. Viewing the source, cloning this repository, or receiving
+   a copy of the Software does not transfer ownership or grant a license
+   beyond the limited permissions below.
+
+2. Limited permission. You may view and run the Software for personal
+   evaluation. You may not, without a separate written commercial license
+   from the Owner:
+
+   - copy, modify, merge, publish, distribute, sublicense, or sell the Software;
+   - use the Software in a product, service, or offering that you sell,
+     license, or otherwise commercialize;
+   - remove or alter copyright, license, or proprietary notices.
+
+3. Commercial licenses. The Owner may sell, license, or otherwise grant
+   additional rights in the Software under separate written terms. Contact
+   the Owner to purchase a commercial license.
+
+4. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+5. Third-party components. Open-source libraries bundled with or used by the
+   Software remain under their own licenses, which are not modified by this
+   license.
