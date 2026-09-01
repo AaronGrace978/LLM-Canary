@@ -2,9 +2,11 @@
 
 ![LLM Canary](docs/hero.png)
 
-Plant unique canaries in your repos — fake secrets, code watermarks, internal phrases, dataset rows, identities, or any string you flag. If an AI service ever regurgitates them, you know exactly who trained on your data.
+Plant unique canaries in your repos, or **probe a real corpus** — a book, wiki, dataset, or any text you import. If a model regurgitates a distinctive passage, Hits **cites the work** and which lab sang.
 
 Desktop app (Tauri 2). If they trained on it, the bird sings.
+
+This is membership evidence, not a dump of a model’s training set. Famous public-domain books are a calibration check (most models already know Ishmael). Unique or private files are the product.
 
 **License:** proprietary. Copyright © 2026 Aaron Grace. See [LICENSE](LICENSE). Commercial licenses are available from the owner.
 
@@ -32,14 +34,9 @@ npm run tauri build
 ## Use
 
 1. **Cages** — paste API keys for Ollama Cloud, OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, xAI, or any OpenAI-compatible endpoint. Fetch models, pick one, Test.
-2. **Plant** — choose a repo and any mix of training-data types:
-   - **Secrets** — AWS, GitHub, OpenAI, Anthropic, Stripe, Slack, Postgres, Hugging Face, SendGrid, npm, SSH keys
-   - **Code** — unique functions, constants, and comment tags
-   - **Documents** — internal architecture phrases and project codenames
-   - **Datasets** — unique CSV / JSON fixture ids
-   - **Identity** — operator emails and employee ids
-   - **Custom flags** — paste any unique strings, one per line
-   Pick density, then commit and push the files (they never train anyone if they stay on disk).
-3. **Hunt** — prefix / recall / needle probes, adapted to each family. Or copy web prompts into ChatGPT and scan the reply on **Hits**.
+2. **Plant** — drop unique bait into a repo (secrets, code watermarks, phrases, dataset rows, identities, custom flags). Commit and push, or nobody will train on them.
+3. **Probe** — import a file/folder or paste text. We extract distinctive passages. Or load the **public-domain pack** (Moby-Dick, Pride and Prejudice, Alice, Frankenstein, Sherlock, A Christmas Carol, The Time Machine) as a sanity check. Copyrighted books are not shipped; import your own copy if you have the right to probe it.
+4. **Hunt** — prefix / recall / needle against planted canaries and corpus passages. Copy web prompts into ChatGPT and scan the reply on **Hits**.
+5. **Hits** — when a model sings, the report cites **source title + locator + provider**. Export markdown for legal / security.
 
 Keys live in the app data directory. They are sent only to the provider you configured.

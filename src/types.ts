@@ -20,6 +20,9 @@ export type Canary = {
   repoName: string;
   files: string[];
   plantedAt: string;
+  sourceTitle?: string;
+  sourceLocator?: string;
+  sourceKind?: string;
 };
 
 export type Provider = {
@@ -52,6 +55,7 @@ export type Probe = {
   hit: boolean;
   matched: string[];
   error: string | null;
+  citation?: string;
 };
 
 export type Snapshot = {
@@ -95,14 +99,22 @@ export type ScanHit = {
   kind: string;
   label: string;
   matched: string[];
+  citation?: string;
 };
 
-export type Tab = "mine" | "plant" | "hunt" | "flock" | "hits" | "cages";
+export type IngestResult = {
+  canaries: Canary[];
+  works: number;
+  skipped: number;
+};
+
+export type Tab = "mine" | "plant" | "probe" | "hunt" | "flock" | "hits" | "cages";
 
 export const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "mine", label: "Mine", hint: "Overview" },
   { id: "plant", label: "Plant", hint: "Drop canaries" },
-  { id: "hunt", label: "Hunt", hint: "Probe models" },
+  { id: "probe", label: "Probe", hint: "Cite a corpus" },
+  { id: "hunt", label: "Hunt", hint: "Ask models" },
   { id: "flock", label: "Flock", hint: "Planted tokens" },
   { id: "hits", label: "Hits", hint: "Evidence" },
   { id: "cages", label: "Cages", hint: "Providers" },

@@ -6,6 +6,7 @@ import type { Snapshot, Tab } from "./types";
 import { TABS } from "./types";
 import { Mine } from "./views/Mine";
 import { Plant } from "./views/Plant";
+import { Probe } from "./views/Probe";
 import { Hunt } from "./views/Hunt";
 import { Flock } from "./views/Flock";
 import { Hits } from "./views/Hits";
@@ -47,10 +48,11 @@ export default function App() {
       const map: Record<string, Tab> = {
         "1": "mine",
         "2": "plant",
-        "3": "hunt",
-        "4": "flock",
-        "5": "hits",
-        "6": "cages",
+        "3": "probe",
+        "4": "hunt",
+        "5": "flock",
+        "6": "hits",
+        "7": "cages",
       };
       if (map[e.key]) setTab(map[e.key]);
     };
@@ -123,6 +125,7 @@ export default function App() {
           {!snap && !bootErr && <p className="empty-inline pad">Lighting the lamp…</p>}
           {snap && tab === "mine" && <Mine snap={snap} go={setTab} />}
           {snap && tab === "plant" && <Plant snap={snap} onDone={reload} />}
+          {snap && tab === "probe" && <Probe snap={snap} onDone={reload} />}
           {snap && tab === "hunt" && <Hunt snap={snap} onDone={reload} />}
           {snap && tab === "flock" && <Flock snap={snap} reveal={reveal} onDone={reload} />}
           {snap && tab === "hits" && <Hits snap={snap} onDone={reload} />}

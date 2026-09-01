@@ -2,7 +2,7 @@ import { useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { exportReport, scanText } from "../api";
 import type { ScanHit, Snapshot } from "../types";
-import { timeAgo } from "../util";
+import { timeAgo, citationFor } from "../util";
 
 export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   const hits = snap.probes.filter((p) => p.hit).slice().reverse();
@@ -37,7 +37,8 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
         <p className="eyebrow">Evidence locker</p>
         <h1>Hits</h1>
         <p className="lede tight">
-          Full prompt + response when a model sings. Export a report for legal / security.
+          Full prompt + response when a model sings. Corpus hits cite the work and locator. Export
+          a report for legal / security.
         </p>
       </header>
 
@@ -61,7 +62,7 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
               ) : (
                 found.map((h) => (
                   <p key={h.canaryId} className="hit-banner">
-                    HIT — {h.kind} / {h.label}
+                    HIT — {h.citation || `${h.kind} / ${h.label}`}
                   </p>
                 ))
               )}
@@ -94,6 +95,9 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
                   {p.canaryKind} · {p.strategy} · {timeAgo(p.at)}
                 </em>
               </header>
+              <p className="citation">
+                Source: {p.citation || citationFor({ label: p.canaryLabel })}
+              </p>
               <p className="matched">Matched {p.matched.map((m) => maskBit(m)).join(" · ")}</p>
               <details>
                 <summary>Prompt</summary>

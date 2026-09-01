@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { HuntSummary, PlantResult, ScanHit, Snapshot, WebPrompt } from "./types";
+import type { HuntSummary, IngestResult, PlantResult, ScanHit, Snapshot, WebPrompt } from "./types";
 
 export type TestResult = { ok: boolean; model: string; preview: string };
 
@@ -25,6 +25,19 @@ export async function plantCanaries(req: {
   customTokens?: string[];
 }): Promise<PlantResult> {
   return invoke("plant_canaries", { req });
+}
+
+export async function ingestCorpus(req: {
+  path?: string;
+  title?: string;
+  text?: string;
+  maxPassages?: number;
+}): Promise<IngestResult> {
+  return invoke("ingest_corpus", { req });
+}
+
+export async function loadPublicDomainPack(): Promise<IngestResult> {
+  return invoke("load_public_domain_pack");
 }
 
 export async function deleteCanary(id: string): Promise<Snapshot> {

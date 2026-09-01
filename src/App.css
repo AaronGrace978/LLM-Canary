@@ -868,6 +868,12 @@ pre {
   color: var(--hit);
 }
 
+.citation {
+  font-size: 13px;
+  color: var(--canary-2);
+  margin: 8px 0 4px;
+}
+
 .hit-banner {
   color: var(--hit);
   font-weight: 600;

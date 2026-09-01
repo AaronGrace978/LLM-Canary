@@ -42,8 +42,20 @@ export function familyLabel(family?: string): string {
       return "Identity";
     case "custom":
       return "Custom";
+    case "corpus":
+      return "Corpus";
     case "secret":
     default:
       return "Secrets";
   }
+}
+
+export function citationFor(c: {
+  sourceTitle?: string;
+  sourceLocator?: string;
+  label: string;
+}): string {
+  const title = (c.sourceTitle || c.label).trim() || c.label;
+  const loc = (c.sourceLocator || "").trim();
+  return loc ? `${title} · ${loc}` : title;
 }
