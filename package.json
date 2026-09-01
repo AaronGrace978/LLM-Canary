@@ -2,7 +2,7 @@
   "name": "llm-canary",
   "private": true,
   "version": "0.3.0",
-  "description": "Plant training-data canaries and probe models against a corpus. Hits cite the source work.",
+  "description": "Get answers about where a model’s training came from — cited public vs private provenance for sources you watch.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {

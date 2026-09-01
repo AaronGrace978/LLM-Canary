@@ -95,13 +95,13 @@ export function Probe({
   return (
     <div className="view">
       <header className="page-head">
-        <p className="eyebrow">Membership test against a known work</p>
-        <h1>Probe a corpus</h1>
+        <p className="eyebrow">Ask where the training came from</p>
+        <h1>Probe sources</h1>
         <p className="lede tight">
-          Import a book, repo, dataset, or any text you care about. We pull distinctive passages,
-          hunt models with prefix / recall / needle, and cite the source if they regurgitate it.
-          Famous public-domain books are a sanity check — most models already know them. Unique
-          or private files are the evidence that sells.
+          Load the works you care about — private wikis, datasets, manuscripts, or public books.
+          We extract distinctive passages, hunt models against them, and answer whether each lab can
+          reproduce that source. Public-domain packs are the baseline. Your private files are the
+          product.
         </p>
       </header>
 

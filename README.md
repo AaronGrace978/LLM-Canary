@@ -2,13 +2,22 @@
 
 ![LLM Canary](docs/hero.png)
 
-Plant unique canaries in your repos, or **probe a real corpus** — a book, wiki, dataset, or any text you import. If a model regurgitates a distinctive passage, Hits **cites the work** and which lab sang.
+**Get answers about where a model’s training came from** — for the sources you care about.
+
+Models are trained on public and private data. Marketing noise won’t tell you which. LLM Canary cuts through that: plant unique canaries or probe real corpora, hunt the labs, and get a cited answer — **public vs private** — for each model.
 
 Desktop app (Tauri 2). If they trained on it, the bird sings.
 
-This is membership evidence, not a dump of a model’s training set. Famous public-domain books are a calibration check (most models already know Ishmael). Unique or private files are the product.
-
 **License:** proprietary. Copyright © 2026 Aaron Grace. See [LICENSE](LICENSE). Commercial licenses are available from the owner.
+
+## What you get
+
+- **Answers by model** — which public sources and which private / unique sources each provider can reproduce
+- **Citations** — work title, locator, and the lab that sang
+- **Calibration vs smoking gun** — famous public-domain hits are expected; your private wiki, dataset, or planted canary is the evidence
+- **Exportable provenance report** — markdown for legal / security
+
+This is membership evidence against sources **you** load or plant. It does not invent a dump of a lab’s entire training set. It answers the question that matters: *did this model train on this?*
 
 ## Run
 
@@ -34,9 +43,9 @@ npm run tauri build
 ## Use
 
 1. **Cages** — paste API keys for Ollama Cloud, OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, xAI, or any OpenAI-compatible endpoint. Fetch models, pick one, Test.
-2. **Plant** — drop unique bait into a repo (secrets, code watermarks, phrases, dataset rows, identities, custom flags). Commit and push, or nobody will train on them.
-3. **Probe** — import a file/folder or paste text. We extract distinctive passages. Or load the **public-domain pack** (Moby-Dick, Pride and Prejudice, Alice, Frankenstein, Sherlock, A Christmas Carol, The Time Machine) as a sanity check. Copyrighted books are not shipped; import your own copy if you have the right to probe it.
-4. **Hunt** — prefix / recall / needle against planted canaries and corpus passages. Copy web prompts into ChatGPT and scan the reply on **Hits**.
-5. **Hits** — when a model sings, the report cites **source title + locator + provider**. Export markdown for legal / security.
+2. **Probe** — import a file/folder or paste text from the sources you want answers about. Or load the **public-domain pack** (Moby-Dick, Pride and Prejudice, Alice, Frankenstein, Sherlock, A Christmas Carol, The Time Machine) as a baseline. Copyrighted books are not shipped; import your own copy if you have the right to probe it.
+3. **Plant** — optional unique bait in your repos (secrets, code watermarks, phrases, dataset rows, identities, custom flags).
+4. **Hunt** — prefix / recall / needle against every watched source.
+5. **Answers** — per-model provenance: private vs public sources, citations, raw evidence, exportable report.
 
 Keys live in the app data directory. They are sent only to the provider you configured.

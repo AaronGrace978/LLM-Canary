@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { CanaryMark } from "../CanaryMark";
 import type { Snapshot, Tab } from "../types";
 import { timeAgo } from "../util";
@@ -9,10 +10,13 @@ export function Mine({
   snap: Snapshot;
   go: (t: Tab) => void;
 }) {
-  const singing = snap.hits > 0;
+  const answers = snap.provenance?.answers ?? [];
+  const privateHits = snap.provenance?.privateHits ?? 0;
+  const publicHits = snap.provenance?.publicHits ?? 0;
+  const singing = privateHits > 0 || snap.hits > 0;
   const armed = snap.providers.filter((p) => p.apiKey.trim().length > 0).length;
   const last = snap.probes.length ? snap.probes[snap.probes.length - 1] : null;
-  const recentHits = snap.probes.filter((p) => p.hit).slice(-4).reverse();
+  const top = useMemo(() => answers.slice(0, 4), [answers]);
 
   return (
     <div className="view">
@@ -21,65 +25,87 @@ export function Mine({
           <CanaryMark singing={singing} size={148} />
         </div>
         <div className="hero-copy">
-          <p className="eyebrow">{singing ? "Alert" : "The shaft is dark. The bird is watching."}</p>
+          <p className="eyebrow">
+            {privateHits > 0
+              ? "Private training evidence"
+              : singing
+                ? "Calibration hits only"
+                : "Training provenance"}
+          </p>
           <h1 className="display">
-            {singing ? "A canary is singing." : "The mine is quiet."}
+            {privateHits > 0
+              ? "We know which private sources they ate."
+              : singing
+                ? "Public sources only — so far."
+                : "Get answers about where training came from."}
           </h1>
           <p className="lede">
-            Plant unique canaries, or probe a real corpus (a book, wiki, dataset, your repo). If a
-            model regurgitates a distinctive passage, we cite the work — and which lab sang.
+            Models are trained on public and private data. This product cuts through the noise:
+            load the sources you care about, hunt the labs, and get a cited answer — public vs
+            private — for each model.
           </p>
           <div className="hero-actions">
-            <button className="btn primary" onClick={() => go("plant")}>
+            <button className="btn primary" onClick={() => go("probe")}>
+              Probe sources
+            </button>
+            <button className="btn ghost" onClick={() => go("plant")}>
               Plant canaries
             </button>
-            <button className="btn ghost" onClick={() => go("probe")}>
-              Probe a corpus
-            </button>
-            <button className="btn ghost" onClick={() => go("cages")}>
-              Arm providers
+            <button className="btn ghost" onClick={() => go("hits")}>
+              See answers
             </button>
           </div>
         </div>
       </header>
 
       <div className="stats">
-        <Stat k="Planted" v={String(snap.canaries.length)} d="canaries + corpus passages" />
+        <Stat k="Sources watched" v={String(snap.canaries.length)} d="planted + imported passages" />
         <Stat k="Armed cages" v={String(armed)} d="providers with a key" />
-        <Stat k="Probes" v={String(snap.probes.length)} d="hunt questions asked" />
-        <Stat k="Hits" v={String(snap.hits)} d="regurgitations caught" hit={snap.hits > 0} />
+        <Stat
+          k="Private hits"
+          v={String(privateHits)}
+          d="unique / proprietary regurgitations"
+          hit={privateHits > 0}
+        />
+        <Stat k="Public hits" v={String(publicHits)} d="expected calibration hits" />
       </div>
 
       <div className="split">
         <section className="panel">
-          <h2>How the trap works</h2>
+          <h2>How you get answers</h2>
           <ol className="steps">
             <li>
-              <b>Plant</b> unique bait, or <b>Probe</b> a real document — Moby-Dick, a private
-              wiki, a dataset, anything you can paste. We extract distinctive passages.
+              <b>Probe</b> the corpora you care about — private wikis, datasets, manuscripts — and
+              load the public-domain pack as a baseline.
             </li>
             <li>
-              <b>Hunt.</b> Prefix, recall, and needle. If the remainder comes back, Hits cites the
-              work, locator, and the model that sang.
+              <b>Plant</b> unique canaries in your own repos if you want bait that never existed
+              before you minted it.
             </li>
             <li>
-              <b>Read the citation.</b> Famous books are expected. Your unique files are the leak.
+              <b>Hunt</b> each model. <b>Answers</b> tells you which public vs private sources that
+              model can reproduce, with citations.
             </li>
           </ol>
         </section>
         <section className="panel">
-          <h2>Recent activity</h2>
-          {recentHits.length ? (
+          <h2>Provenance so far</h2>
+          {top.length ? (
             <ul className="feed">
-              {recentHits.map((p) => (
-                <li key={p.id} className="hit-row">
-                  <span className="pill hit">HIT</span>
+              {top.map((a) => (
+                <li key={`${a.providerName}-${a.model}`} className="hit-row">
+                  <span className={`pill ${a.privateHits > 0 ? "hit" : "public"}`}>
+                    {a.privateHits > 0 ? "PRIVATE" : "PUBLIC"}
+                  </span>
                   <div>
                     <strong>
-                      {p.providerName} / {p.model}
+                      {a.providerName} / {a.model}
                     </strong>
                     <em>
-                      {p.canaryKind} · {timeAgo(p.at)}
+                      {a.privateSources[0] || a.publicSources[0] || "sources"}
+                      {a.privateHits + a.publicHits > 1
+                        ? ` · +${a.privateHits + a.publicHits - 1} more`
+                        : ""}
                     </em>
                   </div>
                 </li>
@@ -90,7 +116,7 @@ export function Mine({
               Last probe {timeAgo(last.at)} on {last.providerName}. No songs yet.
             </p>
           ) : (
-            <p className="empty-inline">No hunts yet. Arm a cage, then send the flock.</p>
+            <p className="empty-inline">No hunts yet. Probe sources, arm a cage, then Hunt.</p>
           )}
         </section>
       </div>

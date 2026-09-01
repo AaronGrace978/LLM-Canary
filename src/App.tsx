@@ -70,7 +70,7 @@ export default function App() {
           <CanaryMark singing={hits > 0} size={28} />
           <div>
             <strong>LLM Canary</strong>
-            <em>if they trained on it, the bird sings</em>
+            <em>cuts through training-data noise</em>
           </div>
         </div>
         <div className="drag" data-tauri-drag-region />

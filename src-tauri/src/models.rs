@@ -71,6 +71,8 @@ pub struct Probe {
     pub error: Option<String>,
     #[serde(default)]
     pub citation: String,
+    #[serde(default)]
+    pub sensitivity: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +91,27 @@ pub struct Snapshot {
     pub probes: Vec<Probe>,
     pub kinds: Vec<KindInfo>,
     pub hits: usize,
+    #[serde(default)]
+    pub provenance: ProvenanceSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvenanceSummary {
+    pub answers: Vec<ProvenanceAnswer>,
+    pub private_hits: usize,
+    pub public_hits: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvenanceAnswer {
+    pub provider_name: String,
+    pub model: String,
+    pub public_sources: Vec<String>,
+    pub private_sources: Vec<String>,
+    pub public_hits: usize,
+    pub private_hits: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -182,6 +205,8 @@ pub struct ScanHit {
     pub matched: Vec<String>,
     #[serde(default)]
     pub citation: String,
+    #[serde(default)]
+    pub sensitivity: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

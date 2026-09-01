@@ -1,14 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { exportReport, scanText } from "../api";
 import type { ScanHit, Snapshot } from "../types";
-import { timeAgo, citationFor } from "../util";
+import { timeAgo, citationFor, sensitivityLabel } from "../util";
 
 export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   const hits = snap.probes.filter((p) => p.hit).slice().reverse();
+  const answers = snap.provenance?.answers ?? [];
+  const privateHits = snap.provenance?.privateHits ?? 0;
+  const publicHits = snap.provenance?.publicHits ?? 0;
   const [paste, setPaste] = useState("");
   const [found, setFound] = useState<ScanHit[] | null>(null);
   const [err, setErr] = useState("");
+
+  const watched = useMemo(() => {
+    let priv = 0;
+    let pub = 0;
+    for (const c of snap.canaries) {
+      if (c.sourceKind === "public_domain") pub += 1;
+      else priv += 1;
+    }
+    return { priv, pub };
+  }, [snap.canaries]);
 
   async function scan() {
     setErr("");
@@ -22,7 +35,7 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
 
   async function exportMd() {
     const path = await save({
-      defaultPath: "llm-canary-report.md",
+      defaultPath: "llm-canary-provenance.md",
       filters: [{ name: "Markdown", extensions: ["md"] }],
     });
     if (typeof path === "string") {
@@ -34,13 +47,92 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   return (
     <div className="view">
       <header className="page-head">
-        <p className="eyebrow">Evidence locker</p>
-        <h1>Hits</h1>
+        <p className="eyebrow">Training provenance</p>
+        <h1>Answers</h1>
         <p className="lede tight">
-          Full prompt + response when a model sings. Corpus hits cite the work and locator. Export
-          a report for legal / security.
+          Cut through the noise. For every source you planted or imported, we answer whether a
+          model can reproduce it — and cite exactly which work it came from. Public-domain hits are
+          expected calibration. Private / unique hits are the smoking gun.
         </p>
       </header>
+
+      <div className="stats">
+        <div className={`stat ${privateHits > 0 ? "is-hit" : ""}`}>
+          <span>Private hits</span>
+          <strong>{privateHits}</strong>
+          <em>unique / proprietary sources</em>
+        </div>
+        <div className="stat">
+          <span>Public hits</span>
+          <strong>{publicHits}</strong>
+          <em>famous / expected sources</em>
+        </div>
+        <div className="stat">
+          <span>Under watch</span>
+          <strong>{watched.priv + watched.pub}</strong>
+          <em>
+            {watched.priv} private · {watched.pub} public
+          </em>
+        </div>
+        <div className="stat">
+          <span>Models answered</span>
+          <strong>{answers.length}</strong>
+          <em>providers with evidence</em>
+        </div>
+      </div>
+
+      <section className="panel">
+        <h2>Where each model’s training shows up</h2>
+        {answers.length === 0 ? (
+          <p className="empty-inline">
+            No answers yet. Load sources on Probe (or Plant bait), arm Cages, then Hunt.
+          </p>
+        ) : (
+          <div className="answer-grid">
+            {answers.map((a) => (
+              <article
+                key={`${a.providerName}-${a.model}`}
+                className={`answer-card ${a.privateHits > 0 ? "is-private" : ""}`}
+              >
+                <header>
+                  <strong>
+                    {a.providerName} · {a.model}
+                  </strong>
+                  <em>
+                    {a.privateHits} private · {a.publicHits} public
+                  </em>
+                </header>
+                <div className="answer-cols">
+                  <div>
+                    <span className="pill private">Private / unique</span>
+                    {a.privateSources.length ? (
+                      <ul>
+                        {a.privateSources.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="empty-inline">None detected</p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="pill public">Public / expected</span>
+                    {a.publicSources.length ? (
+                      <ul>
+                        {a.publicSources.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="empty-inline">None detected</p>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="split plant-grid">
         <section className="panel">
@@ -52,17 +144,18 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
             placeholder="Paste a ChatGPT / Claude / Gemini answer here…"
           />
           <button className="btn primary" onClick={scan} disabled={!paste.trim()}>
-            Scan for canaries
+            Match to sources
           </button>
           {err && <p className="err">{err}</p>}
           {found && (
             <div className="scan-result">
               {found.length === 0 ? (
-                <p className="empty-inline">No planted canaries in that text.</p>
+                <p className="empty-inline">No watched sources in that text.</p>
               ) : (
                 found.map((h) => (
                   <p key={h.canaryId} className="hit-banner">
-                    HIT — {h.citation || `${h.kind} / ${h.label}`}
+                    {h.sensitivity === "public" ? "PUBLIC" : "PRIVATE"} —{" "}
+                    {h.citation || `${h.kind} / ${h.label}`}
                   </p>
                 ))
               )}
@@ -70,24 +163,29 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
           )}
         </section>
         <section className="panel">
-          <h2>Export</h2>
-          <p className="hint">Markdown with every hit: provider, model, prompt, raw response.</p>
+          <h2>Export provenance report</h2>
+          <p className="hint">
+            Markdown answers by model: private vs public sources, then raw prompt/response evidence.
+          </p>
           <button className="btn ghost" onClick={exportMd} disabled={!hits.length}>
-            Save evidence report
+            Save provenance report
           </button>
         </section>
       </div>
 
       {hits.length === 0 ? (
         <section className="panel">
-          <p className="empty-inline">No regurgitations yet. That’s good — or you haven’t hunted.</p>
+          <p className="empty-inline">No regurgitations yet. That’s quiet — or you haven’t hunted.</p>
         </section>
       ) : (
         <div className="stack">
+          <h2 className="section-title">Raw evidence</h2>
           {hits.map((p) => (
             <article key={p.id} className="evidence">
               <header>
-                <span className="pill hit">HIT</span>
+                <span className={`pill ${p.sensitivity === "public" ? "public" : "hit"}`}>
+                  {p.sensitivity === "public" ? "PUBLIC" : "PRIVATE"}
+                </span>
                 <strong>
                   {p.providerName} · {p.model}
                 </strong>
@@ -96,7 +194,8 @@ export function Hits({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
                 </em>
               </header>
               <p className="citation">
-                Source: {p.citation || citationFor({ label: p.canaryLabel })}
+                Source: {p.citation || citationFor({ label: p.canaryLabel })} ·{" "}
+                {sensitivityLabel(p.sensitivity)}
               </p>
               <p className="matched">Matched {p.matched.map((m) => maskBit(m)).join(" · ")}</p>
               <details>

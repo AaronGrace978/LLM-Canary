@@ -56,6 +56,22 @@ export type Probe = {
   matched: string[];
   error: string | null;
   citation?: string;
+  sensitivity?: string;
+};
+
+export type ProvenanceAnswer = {
+  providerName: string;
+  model: string;
+  publicSources: string[];
+  privateSources: string[];
+  publicHits: number;
+  privateHits: number;
+};
+
+export type ProvenanceSummary = {
+  answers: ProvenanceAnswer[];
+  privateHits: number;
+  publicHits: number;
 };
 
 export type Snapshot = {
@@ -64,6 +80,7 @@ export type Snapshot = {
   probes: Probe[];
   kinds: KindInfo[];
   hits: number;
+  provenance?: ProvenanceSummary;
 };
 
 export type PlantResult = {
@@ -100,6 +117,7 @@ export type ScanHit = {
   label: string;
   matched: string[];
   citation?: string;
+  sensitivity?: string;
 };
 
 export type IngestResult = {
@@ -116,6 +134,6 @@ export const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "probe", label: "Probe", hint: "Cite a corpus" },
   { id: "hunt", label: "Hunt", hint: "Ask models" },
   { id: "flock", label: "Flock", hint: "Planted tokens" },
-  { id: "hits", label: "Hits", hint: "Evidence" },
+  { id: "hits", label: "Answers", hint: "Provenance" },
   { id: "cages", label: "Cages", hint: "Providers" },
 ];

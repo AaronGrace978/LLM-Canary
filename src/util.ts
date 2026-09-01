@@ -59,3 +59,12 @@ export function citationFor(c: {
   const loc = (c.sourceLocator || "").trim();
   return loc ? `${title} · ${loc}` : title;
 }
+
+export function sensitivityFor(c?: { sourceKind?: string; sensitivity?: string }): "public" | "private" {
+  if (c?.sensitivity === "public" || c?.sourceKind === "public_domain") return "public";
+  return "private";
+}
+
+export function sensitivityLabel(s?: string): string {
+  return s === "public" ? "Public / expected" : "Private / unique";
+}

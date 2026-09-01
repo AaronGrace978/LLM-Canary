@@ -2,6 +2,7 @@ mod canary;
 mod corpus;
 mod models;
 mod plant;
+mod provenance;
 mod providers;
 mod store;
 
@@ -25,12 +26,31 @@ fn persist(state: &AppState) -> Result<(), String> {
 
 fn snapshot_from(db: &Db) -> Snapshot {
     let hits = db.probes.iter().filter(|p| p.hit).count();
+    let answers = provenance::build_provider_answers(&db.canaries, &db.probes);
+    let private_hits = answers.iter().map(|a| a.private_hits).sum();
+    let public_hits = answers.iter().map(|a| a.public_hits).sum();
+    let provenance = ProvenanceSummary {
+        answers: answers
+            .into_iter()
+            .map(|a| ProvenanceAnswer {
+                provider_name: a.provider_name,
+                model: a.model,
+                public_sources: a.public_sources,
+                private_sources: a.private_sources,
+                public_hits: a.public_hits,
+                private_hits: a.private_hits,
+            })
+            .collect(),
+        private_hits,
+        public_hits,
+    };
     Snapshot {
         canaries: db.canaries.clone(),
         providers: db.providers.clone(),
         probes: db.probes.clone(),
         kinds: kinds_catalog(),
         hits,
+        provenance,
     }
 }
 
@@ -282,6 +302,7 @@ async fn run_hunt(
                     matched: matched.clone(),
                     error: error.clone(),
                     citation: citation_for(canary),
+                    sensitivity: provenance::sensitivity_for(canary).as_str().into(),
                 };
 
                 let _ = app.emit(
@@ -409,6 +430,7 @@ fn scan_text(state: State<AppState>, req: ScanRequest) -> Result<Vec<ScanHit>, S
                 label: c.label.clone(),
                 matched,
                 citation: citation_for(c),
+                sensitivity: provenance::sensitivity_for(c).as_str().into(),
             });
         }
     }
@@ -435,33 +457,7 @@ fn web_prompts(state: State<AppState>, canary_ids: Vec<String>) -> Result<Vec<We
 #[tauri::command]
 fn export_report(state: State<AppState>, path: String) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut md = String::from("# LLM Canary evidence report\n\n");
-    md.push_str(&format!("Generated: {}\n\n", now()));
-    let hits: Vec<&Probe> = db.probes.iter().filter(|p| p.hit).collect();
-    md.push_str(&format!(
-        "Planted canaries: {}\nProbes: {}\nHits: {}\n\n",
-        db.canaries.len(),
-        db.probes.len(),
-        hits.len()
-    ));
-    if hits.is_empty() {
-        md.push_str("No regurgitations recorded yet.\n");
-    }
-    for p in hits {
-        md.push_str(&format!(
-            "## HIT — {} / {}\n\n- When: {}\n- Source: {}\n- Canary: {} ({})\n- Strategy: {}\n- Matched: {}\n\n### Prompt\n\n```\n{}\n```\n\n### Response\n\n```\n{}\n```\n\n",
-            p.provider_name,
-            p.model,
-            p.at,
-            if p.citation.is_empty() { p.canary_label.clone() } else { p.citation.clone() },
-            p.canary_label,
-            p.canary_kind,
-            p.strategy,
-            p.matched.join(", "),
-            p.prompt,
-            p.response
-        ));
-    }
+    let md = provenance::render_provenance_markdown(&db.canaries, &db.probes, &now());
     fs::write(&path, md).map_err(|e| e.to_string())
 }
 
