@@ -8,7 +8,7 @@ Models are trained on public and private data. Marketing noise won’t tell you 
 
 Desktop app (Tauri 2). If they trained on it, the bird sings.
 
-**License:** proprietary. Copyright © 2026 Aaron Grace. See [LICENSE](LICENSE). Commercial licenses are available from the owner.
+**License:** proprietary. Copyright © 2026 Aaron Grace. See [LICENSE](LICENSE). Commercial licenses are available from the owner. The Software may not be used to train, fine-tune, or distill any AI/ML model or dataset.
 
 ## What you get
 

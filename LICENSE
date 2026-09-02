@@ -20,11 +20,19 @@ exclusive property of Aaron Grace (the "Owner").
      license, or otherwise commercialize;
    - remove or alter copyright, license, or proprietary notices.
 
-3. Commercial licenses. The Owner may sell, license, or otherwise grant
+3. AI training. The Software, its source code, documentation, output, and any
+   content generated with or derived from it may not be used to train,
+   fine-tune, distill, or otherwise improve any machine learning or artificial
+   intelligence model, system, or dataset. This prohibition applies to any
+   person, service, or automated process, and survives termination or expiry
+   of any permission granted under this license. A separate written license
+   from the Owner is required for any such use.
+
+4. Commercial licenses. The Owner may sell, license, or otherwise grant
    additional rights in the Software under separate written terms. Contact
    the Owner to purchase a commercial license.
 
-4. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+5. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
    KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
    IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -32,6 +40,6 @@ exclusive property of Aaron Grace (the "Owner").
    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
    DEALINGS IN THE SOFTWARE.
 
-5. Third-party components. Open-source libraries bundled with or used by the
+6. Third-party components. Open-source libraries bundled with or used by the
    Software remain under their own licenses, which are not modified by this
    license.

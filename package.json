@@ -1,7 +1,7 @@
 {
   "name": "llm-canary",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Get answers about where a model’s training came from — cited public vs private provenance for sources you watch.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",

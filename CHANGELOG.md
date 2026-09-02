@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2 — 2026-09-01
+
+### License
+- New **AI-training clause** (§3): the Software, its source, documentation, output, and derived content may not be used to train, fine-tune, distill, or improve any ML/AI model, system, or dataset — by any person, service, or automated process. A separate written license is required for such use, and the prohibition survives termination.
+- Sections renumbered (Commercial licenses → §4, No warranty → §5, Third-party components → §6).
+
+
 ## 0.4.1 — 2026-09-01
 
 ### Secret storage
