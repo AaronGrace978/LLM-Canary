@@ -15,25 +15,14 @@ pub fn http() -> reqwest::Client {
     client()
 }
 
-/// Default sampling temperature for conversational use.
-pub const CHAT_TEMPERATURE: f32 = 0.2;
-/// Extraction probes run greedy so repeated trials measure the model, not the sampler.
-pub const HUNT_TEMPERATURE: f32 = 0.0;
-
-pub async fn chat_at(
-    http: &reqwest::Client,
-    p: &Provider,
-    prompt: &str,
-    temperature: f32,
-) -> Result<String, String> {
-    chat_messages_at(
+pub async fn chat(http: &reqwest::Client, p: &Provider, prompt: &str) -> Result<String, String> {
+    chat_messages(
         http,
         p,
         &[ChatMessage {
             role: "user".into(),
             content: prompt.to_string(),
         }],
-        temperature,
     )
     .await
 }
@@ -43,16 +32,6 @@ pub async fn chat_messages(
     p: &Provider,
     messages: &[ChatMessage],
 ) -> Result<String, String> {
-    chat_messages_at(http, p, messages, CHAT_TEMPERATURE).await
-}
-
-pub async fn chat_messages_at(
-    http: &reqwest::Client,
-    p: &Provider,
-    messages: &[ChatMessage],
-    temperature: f32,
-) -> Result<String, String> {
-    let temperature = if temperature.is_finite() { temperature.clamp(0.0, 2.0) } else { CHAT_TEMPERATURE };
     if p.model.trim().is_empty() {
         return Err("Pick a model first.".into());
     }
@@ -60,11 +39,11 @@ pub async fn chat_messages_at(
         return Err("Nothing to send.".into());
     }
     match p.kind.as_str() {
-        "ollama" => ollama_chat(http, p, messages, temperature).await,
-        "openai" => openai_chat(http, p, messages, false, temperature).await,
-        "anthropic" => anthropic_chat(http, p, messages, temperature).await,
-        "gemini" => gemini_chat(http, p, messages, temperature).await,
-        _ => openai_compat_chat(http, p, messages, temperature).await,
+        "ollama" => ollama_chat(http, p, messages).await,
+        "openai" => openai_chat(http, p, messages, false).await,
+        "anthropic" => anthropic_chat(http, p, messages).await,
+        "gemini" => gemini_chat(http, p, messages).await,
+        _ => openai_compat_chat(http, p, messages).await,
     }
 }
 
@@ -97,13 +76,7 @@ pub async fn list_models(http: &reqwest::Client, p: &Provider) -> Result<Vec<Str
 }
 
 pub async fn test_provider(http: &reqwest::Client, p: &Provider) -> Result<TestResult, String> {
-    let preview = chat_at(
-        http,
-        p,
-        "Reply with the single word PONG and nothing else.",
-        HUNT_TEMPERATURE,
-    )
-    .await?;
+    let preview = chat(http, p, "Reply with the single word PONG and nothing else.").await?;
     Ok(TestResult {
         ok: true,
         model: p.model.clone(),
@@ -149,15 +122,13 @@ async fn ollama_chat(
     http: &reqwest::Client,
     p: &Provider,
     messages: &[ChatMessage],
-    temperature: f32,
 ) -> Result<String, String> {
     require_key(p)?;
     let url = format!("{}/api/chat", p.base_url.trim_end_matches('/'));
     let mut req = http.post(&url).json(&json!({
         "model": p.model,
         "messages": openai_style_messages(messages),
-        "stream": false,
-        "options": {"temperature": temperature, "num_predict": 1600}
+        "stream": false
     }));
     if !p.api_key.trim().is_empty() {
         req = req.bearer_auth(p.api_key.trim());
@@ -193,7 +164,6 @@ async fn openai_chat(
     p: &Provider,
     messages: &[ChatMessage],
     completion_tokens: bool,
-    temperature: f32,
 ) -> Result<String, String> {
     require_key(p)?;
     let url = format!("{}/chat/completions", p.base_url.trim_end_matches('/'));
@@ -209,7 +179,7 @@ async fn openai_chat(
         body["max_completion_tokens"] = json!(1600);
     } else {
         body["max_tokens"] = json!(1600);
-        body["temperature"] = json!(temperature);
+        body["temperature"] = json!(0.2);
     }
     let req = http
         .post(&url)
@@ -221,7 +191,7 @@ async fn openai_chat(
             if !use_completion
                 && (e.contains("max_completion_tokens") || e.contains("unsupported_parameter"))
             {
-                Box::pin(openai_chat(http, p, messages, true, temperature)).await
+                Box::pin(openai_chat(http, p, messages, true)).await
             } else {
                 Err(e)
             }
@@ -278,7 +248,6 @@ async fn openai_compat_chat(
     http: &reqwest::Client,
     p: &Provider,
     messages: &[ChatMessage],
-    temperature: f32,
 ) -> Result<String, String> {
     require_key(p)?;
     let base = p.base_url.trim_end_matches('/');
@@ -291,7 +260,7 @@ async fn openai_compat_chat(
         "model": p.model,
         "messages": openai_style_messages(messages),
         "max_tokens": 1600,
-        "temperature": temperature
+        "temperature": 0.2
     });
     let mut req = http.post(&url).json(&body);
     if !p.api_key.trim().is_empty() {
@@ -347,7 +316,6 @@ async fn anthropic_chat(
     http: &reqwest::Client,
     p: &Provider,
     messages: &[ChatMessage],
-    temperature: f32,
 ) -> Result<String, String> {
     require_key(p)?;
     let url = format!("{}/v1/messages", p.base_url.trim_end_matches('/'));
@@ -382,7 +350,6 @@ async fn anthropic_chat(
     let mut body = json!({
         "model": p.model,
         "max_tokens": 1600,
-        "temperature": temperature.min(1.0),
         "messages": api_messages
     });
     if !system.trim().is_empty() {
@@ -434,7 +401,6 @@ async fn gemini_chat(
     http: &reqwest::Client,
     p: &Provider,
     messages: &[ChatMessage],
-    temperature: f32,
 ) -> Result<String, String> {
     require_key(p)?;
     let model = p.model.trim().trim_start_matches("models/");
@@ -466,7 +432,7 @@ async fn gemini_chat(
     }
     let mut body = json!({
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": 1600, "temperature": temperature}
+        "generationConfig": {"maxOutputTokens": 1600, "temperature": 0.2}
     });
     if !system.trim().is_empty() {
         body["systemInstruction"] = json!({

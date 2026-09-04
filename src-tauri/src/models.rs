@@ -73,19 +73,6 @@ pub struct Probe {
     pub citation: String,
     #[serde(default)]
     pub sensitivity: String,
-    /// 0.0–1.0 share of the hidden remainder reproduced verbatim (normalized).
-    #[serde(default)]
-    pub score: f32,
-    /// 1-based trial index when the same prompt was repeated.
-    #[serde(default = "default_trial")]
-    pub trial: u32,
-    /// Negative control: target was a scrambled decoy. Never counts as evidence.
-    #[serde(default)]
-    pub control: bool,
-    #[serde(default)]
-    pub abstained: bool,
-    #[serde(default)]
-    pub temperature: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,30 +135,6 @@ pub struct ProvenanceAnswer {
     pub private_sources: Vec<String>,
     pub public_hits: usize,
     pub private_hits: usize,
-    /// Scored, non-control probes that returned a reply.
-    pub probes: usize,
-    pub hits: usize,
-    pub hit_rate: f32,
-    pub ci_low: f32,
-    pub ci_high: f32,
-    pub mean_score: f32,
-    pub abstain_rate: f32,
-    pub private_probes: usize,
-    pub public_probes: usize,
-    pub control_probes: usize,
-    pub control_hits: usize,
-    pub errors: usize,
-    pub by_strategy: Vec<StrategyStat>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct StrategyStat {
-    pub strategy: String,
-    pub probes: usize,
-    pub hits: usize,
-    pub hit_rate: f32,
-    pub mean_score: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -221,7 +184,6 @@ pub struct ChatHit {
     pub matched: Vec<String>,
     pub citation: String,
     pub sensitivity: String,
-    pub score: f32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -281,15 +243,6 @@ pub struct HuntRequest {
     pub canary_ids: Vec<String>,
     pub provider_ids: Vec<String>,
     pub strategies: Vec<String>,
-    /// Repeat each prompt this many times (1–5). Rates need a denominator.
-    #[serde(default)]
-    pub trials: Option<u32>,
-    /// Also probe a scrambled decoy per canary to measure detector false positives.
-    #[serde(default)]
-    pub controls: bool,
-    /// Sampling temperature; defaults to 0 for reproducible extraction.
-    #[serde(default)]
-    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -298,9 +251,6 @@ pub struct HuntSummary {
     pub probes: Vec<Probe>,
     pub hits: usize,
     pub errors: usize,
-    pub control_probes: usize,
-    pub control_hits: usize,
-    pub trials: u32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -314,14 +264,6 @@ pub struct HuntProgress {
     pub strategy: String,
     pub message: String,
     pub hit: Option<bool>,
-    #[serde(default)]
-    pub score: f32,
-    #[serde(default)]
-    pub control: bool,
-    #[serde(default)]
-    pub done: usize,
-    #[serde(default)]
-    pub total: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -342,8 +284,6 @@ pub struct ScanHit {
     pub citation: String,
     #[serde(default)]
     pub sensitivity: String,
-    #[serde(default)]
-    pub score: f32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -378,10 +318,6 @@ fn default_secret_family() -> String {
 
 fn default_planted_source() -> String {
     "planted".into()
-}
-
-fn default_trial() -> u32 {
-    1
 }
 
 pub fn family_name(family: &str) -> &'static str {
