@@ -57,20 +57,6 @@ export type Probe = {
   error: string | null;
   citation?: string;
   sensitivity?: string;
-  /** 0–1 share of the hidden remainder reproduced verbatim. */
-  score?: number;
-  trial?: number;
-  control?: boolean;
-  abstained?: boolean;
-  temperature?: number;
-};
-
-export type StrategyStat = {
-  strategy: string;
-  probes: number;
-  hits: number;
-  hitRate: number;
-  meanScore: number;
 };
 
 export type ProvenanceAnswer = {
@@ -80,19 +66,6 @@ export type ProvenanceAnswer = {
   privateSources: string[];
   publicHits: number;
   privateHits: number;
-  probes: number;
-  hits: number;
-  hitRate: number;
-  ciLow: number;
-  ciHigh: number;
-  meanScore: number;
-  abstainRate: number;
-  privateProbes: number;
-  publicProbes: number;
-  controlProbes: number;
-  controlHits: number;
-  errors: number;
-  byStrategy: StrategyStat[];
 };
 
 export type ProvenanceSummary = {
@@ -137,19 +110,12 @@ export type HuntProgress = {
   strategy: string;
   message: string;
   hit: boolean | null;
-  score: number;
-  control: boolean;
-  done: number;
-  total: number;
 };
 
 export type HuntSummary = {
   probes: Probe[];
   hits: number;
   errors: number;
-  controlProbes: number;
-  controlHits: number;
-  trials: number;
 };
 
 export type WebPrompt = {
@@ -165,7 +131,6 @@ export type ScanHit = {
   matched: string[];
   citation?: string;
   sensitivity?: string;
-  score?: number;
 };
 
 export type IngestResult = {
@@ -186,7 +151,6 @@ export type ChatHit = {
   matched: string[];
   citation: string;
   sensitivity: string;
-  score: number;
 };
 
 export type ChatTurnResult = {

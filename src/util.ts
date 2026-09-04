@@ -68,8 +68,3 @@ export function sensitivityFor(c?: { sourceKind?: string; sensitivity?: string }
 export function sensitivityLabel(s?: string): string {
   return s === "public" ? "Public / expected" : "Private / unique";
 }
-
-export function pct(x?: number): string {
-  if (x === undefined || Number.isNaN(x)) return "–";
-  return `${Math.round(x * 100)}%`;
-}

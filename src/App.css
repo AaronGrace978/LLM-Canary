@@ -726,37 +726,6 @@ main {
   background: var(--canary);
 }
 
-.log-line.control .dot {
-  background: var(--ink-dim);
-  opacity: 0.6;
-}
-
-.log-line.false-positive {
-  color: var(--canary-2);
-}
-
-.log-line.false-positive .dot {
-  background: var(--canary);
-}
-
-.grid.bench td {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.grid.bench td:first-child {
-  white-space: normal;
-  min-width: 180px;
-}
-
-.grid.bench tr.is-private td {
-  background: color-mix(in srgb, var(--hit) 6%, transparent);
-}
-
-.grid.bench td.err {
-  color: var(--canary-2);
-}
-
 .prompt-card {
   border-top: 1px solid var(--line);
   padding-top: 10px;

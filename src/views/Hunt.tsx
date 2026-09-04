@@ -11,10 +11,7 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   const [canaryIds, setCanaryIds] = useState<string[]>([]);
   const [providerIds, setProviderIds] = useState<string[]>([]);
   const [strategies, setStrategies] = useState<string[]>(["prefix", "recall", "needle"]);
-  const [trials, setTrials] = useState(3);
-  const [controls, setControls] = useState(true);
   const [log, setLog] = useState<{ phase: string; message: string }[]>([]);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [pack, setPack] = useState<WebPrompt[] | null>(null);
@@ -28,8 +25,6 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   useEffect(() => {
     let un: (() => void) | undefined;
     listen<HuntProgress>("hunt-progress", (e) => {
-      if (e.payload.total > 0) setProgress({ done: e.payload.done, total: e.payload.total });
-      if (e.payload.phase === "asking") return;
       setLog((l) => [...l, { phase: e.payload.phase, message: e.payload.message }]);
     }).then((fn) => {
       un = fn;
@@ -46,26 +41,15 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
   async function hunt() {
     setErr("");
     setPack(null);
-    setLog([
-      {
-        phase: "start",
-        message: `Opening the cages — temperature 0, ${trials} trial${trials === 1 ? "" : "s"} per prompt${controls ? ", decoy controls on" : ""}.`,
-      },
-    ]);
-    setProgress(null);
+    setLog([{ phase: "start", message: "Opening the cages…" }]);
     setBusy(true);
     try {
-      const r = await runHunt({ canaryIds, providerIds, strategies, trials, controls, temperature: 0 });
-      const scored = r.probes.filter((p) => !p.error && !p.control).length;
+      const r = await runHunt({ canaryIds, providerIds, strategies });
       setLog((l) => [
         ...l,
         {
           phase: r.hits ? "hit" : "done",
-          message: `Done. ${r.hits}/${scored} scored probes hit, ${r.errors} error${r.errors === 1 ? "" : "s"}${
-            controls
-              ? ` · controls ${r.controlHits}/${r.controlProbes} false positive${r.controlHits === 1 ? "" : "s"}`
-              : ""
-          }.`,
+          message: `Done. ${r.hits} hit${r.hits === 1 ? "" : "s"}, ${r.errors} error${r.errors === 1 ? "" : "s"}.`,
         },
       ]);
       onDone();
@@ -87,11 +71,9 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
         <p className="eyebrow">Membership test</p>
         <h1>Hunt</h1>
         <p className="lede tight">
-          We never send the full canary. Prefix, recall, and needle probes run greedy (temperature
-          0) and are repeated so every model gets a hit rate with a confidence interval, not a
-          single anecdote. Each reply is scored 0–100% by how much of the hidden remainder came back
-          verbatim after normalizing quotes, dashes, case, and whitespace. Decoy controls measure
-          the detector’s own false-positive rate.
+          We never send the full canary. Prefix, recall, and needle probes work for planted bait
+          and for corpus passages. If the remainder comes back, Hits cites the work — your repo,
+          a public-domain book, or a file you imported.
         </p>
       </header>
 
@@ -159,36 +141,8 @@ export function Hunt({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
                 </button>
               ))}
             </div>
-            <label className="lbl">Trials per prompt</label>
-            <div className="chips compact">
-              {[1, 3, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`chip ${trials === n ? "on" : ""}`}
-                  onClick={() => setTrials(n)}
-                >
-                  <b>{n}</b>
-                </button>
-              ))}
-            </div>
-            <label className="check tight-check">
-              <input type="checkbox" checked={controls} onChange={(e) => setControls(e.target.checked)} />
-              <span>
-                Decoy controls
-                <em>score each reply against a scrambled target too</em>
-              </span>
-            </label>
-            <p className="hint">
-              {canaryIds.length * providerIds.length * strategies.length * trials * (controls ? 2 : 1)}{" "}
-              model calls at temperature 0.
-            </p>
             <button className="btn primary block" disabled={busy} onClick={hunt}>
-              {busy && progress
-                ? `Hunting… ${progress.done}/${progress.total}`
-                : busy
-                  ? "Hunting…"
-                  : "Send the canaries"}
+              {busy ? "Hunting…" : "Send the canaries"}
             </button>
             <button className="btn ghost block" onClick={copyPack} disabled={!snap.canaries.length}>
               Build web prompts

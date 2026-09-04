@@ -66,9 +66,6 @@ export async function runHunt(req: {
   canaryIds: string[];
   providerIds: string[];
   strategies: string[];
-  trials?: number;
-  controls?: boolean;
-  temperature?: number;
 }): Promise<HuntSummary> {
   return invoke("run_hunt", { req });
 }
