@@ -23,4 +23,6 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 rand = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 url = "2"
-keyring = "3"
+# keyring 3 ships no credential store unless a platform backend is enabled;
+# without these features every save fails with "credential vault" errors.
+keyring = { version = "3", features = ["apple-native", "windows-native", "async-secret-service", "tokio", "crypto-rust"] }
