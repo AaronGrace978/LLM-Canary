@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { chatTurn } from "../api";
 import type { ChatHit, ChatMessage, Snapshot } from "../types";
-import { sensitivityLabel } from "../util";
+import { pct, sensitivityLabel } from "../util";
 
 type Bubble = ChatMessage & { hits?: ChatHit[] };
 
@@ -189,7 +189,9 @@ export function Chat({ snap, onDone }: { snap: Snapshot; onDone: () => void }) {
                           {sensitivityLabel(h.sensitivity)}
                         </span>
                         <strong>{h.citation || h.label}</strong>
-                        <em>{h.matched[0]}</em>
+                        <em>
+                          {pct(h.score)} verbatim · {h.matched[0]}
+                        </em>
                       </li>
                     ))}
                   </ul>
