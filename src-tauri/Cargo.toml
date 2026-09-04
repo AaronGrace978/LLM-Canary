@@ -1,6 +1,6 @@
 [package]
 name = "llm-canary"
-version = "0.5.0"
+version = "0.4.2"
 description = "Get answers about where a model's training came from — cited public vs private provenance for sources you watch."
 authors = ["Aaron Grace <aarongrace978@gmail.com>"]
 license-file = "../LICENSE"

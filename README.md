@@ -21,14 +21,6 @@ Desktop app (Tauri 2). If they trained on it, the bird sings.
 
 This is membership evidence against sources **you** load or plant. It does not invent a dump of a lab’s entire training set. It answers the question that matters: *did this model train on this?*
 
-## How the benchmark works
-
-- **Prompts never contain the full target.** Prefix-completion, title-recall, and needle prompts reveal only a prefix, a five-word stem, or a short interior fragment.
-- **Greedy decoding.** Extraction probes run at temperature 0 and are repeated (1/3/5 trials) so results replicate.
-- **Continuous score.** Reply and target are normalized (case, whitespace, quotes, dashes). The part of the target the prompt already revealed is removed, and the score is the longest verbatim run divided by the length of that hidden remainder. A hit is score ≥ 50%, or a verbatim run of ≥ 40 characters at ≥ 25%. Exact matches of planted random tokens (≥ 10 chars) also count.
-- **Negative controls.** Optionally, each reply is also scored against a scrambled decoy of its target. Control hits are detector false positives and are reported separately.
-- **Rates with uncertainty.** Answers reports hit rate with a 95% Wilson interval, mean score, abstain rate, and a per-strategy breakdown for every model probed — including models with zero hits.
-
 ## Run
 
 Node.js 22+ and Rust are required. WebView2 ships with Windows 11.

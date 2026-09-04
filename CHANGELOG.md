@@ -1,20 +1,5 @@
 # Changelog
 
-## 0.5.0 — 2026-09-04
-
-### Benchmarking rigor
-- **Continuous memorization score.** Every probe is scored 0–100%: the longest verbatim run the model produced divided by the length of the target the prompt did *not* reveal. Reply and target are normalized first (case, whitespace, curly quotes, dashes, ellipses), so typography and line wrapping no longer turn a reproduction into a miss. Exact matches of planted random tokens remain a fast-path hit.
-- **Greedy decoding for extraction.** Hunt probes run at temperature 0 so repeated runs measure the model, not the sampler. Chat keeps its conversational temperature.
-- **Repeated trials.** Hunt repeats each prompt 1, 3, or 5 times; every probe records its trial index and temperature.
-- **Negative controls.** Optional decoy targets (same prefix, scrambled remainder) are scored against the very same replies. Any control hit is a detector false positive and is reported separately; controls never count as evidence.
-- **Rates, not anecdotes.** Answers now shows a benchmark table per model: scored probes, hit rate with a 95% Wilson interval, mean score, abstain rate, private vs public hits over probes, control false positives, errors, and a per-strategy breakdown. Models with zero hits get a row instead of disappearing.
-- **Report.** The provenance markdown gains a Methodology section and the benchmark table; raw evidence lists score, trial, and temperature.
-- Paste-scan and Chat hits use the same scorer and show the verbatim share.
-
-### Fixes
-- **Keys were not being saved.** `keyring` 3 ships no credential store unless a platform backend is enabled; the OS backends (Windows Credential Manager, macOS Keychain, Linux Secret Service) are now compiled in. Previously every save failed with a `credential vault` error.
-- Release workflow default tag bumped.
-
 ## 0.4.2 — 2026-09-01
 
 ### License
