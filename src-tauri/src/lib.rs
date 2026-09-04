@@ -5,6 +5,7 @@ mod models;
 mod plant;
 mod provenance;
 mod providers;
+mod score;
 mod secrets;
 mod store;
 
@@ -26,23 +27,53 @@ fn persist(state: &AppState) -> Result<(), String> {
     store::save(&state.data_dir, &db)
 }
 
+/// One scored comparison of a model reply against a target.
+struct Evaluation {
+    matched: Vec<String>,
+    score: f32,
+    hit: bool,
+    abstained: bool,
+}
+
+/// Exact needle detection stays as the fast path (a 10+ char random token is
+/// proof on its own); the normalized memorization score handles typography,
+/// wrapping, and partial recall, and gives every probe a continuous value.
+fn evaluate(response: &str, target: &Canary, prompt: &str) -> Evaluation {
+    let exact = if target.family == "corpus" {
+        corpus::detect_passage(response, target, prompt)
+    } else {
+        canary::detect(response, &target.value, &target.needles, prompt)
+    };
+    let mem = score::memorization(response, &target.value, prompt);
+    let exact_hit = !exact.is_empty();
+    let hit = exact_hit || mem.hit;
+    let score = if exact_hit {
+        mem.score.max(score::HIT_SCORE)
+    } else {
+        mem.score
+    };
+    let matched = if exact_hit {
+        exact
+    } else if hit && !mem.run.is_empty() {
+        vec![mem.run.clone()]
+    } else {
+        vec![]
+    };
+    Evaluation {
+        matched,
+        score,
+        hit,
+        abstained: mem.abstained && !hit,
+    }
+}
+
 fn snapshot_from(db: &Db) -> Snapshot {
-    let hits = db.probes.iter().filter(|p| p.hit).count();
+    let hits = db.probes.iter().filter(|p| p.hit && !p.control).count();
     let answers = provenance::build_provider_answers(&db.canaries, &db.probes);
     let private_hits = answers.iter().map(|a| a.private_hits).sum();
     let public_hits = answers.iter().map(|a| a.public_hits).sum();
     let provenance = ProvenanceSummary {
-        answers: answers
-            .into_iter()
-            .map(|a| ProvenanceAnswer {
-                provider_name: a.provider_name,
-                model: a.model,
-                public_sources: a.public_sources,
-                private_sources: a.private_sources,
-                public_hits: a.public_hits,
-                private_hits: a.private_hits,
-            })
-            .collect(),
+        answers,
         private_hits,
         public_hits,
     };
@@ -242,111 +273,195 @@ async fn run_hunt(
         req.strategies
     };
 
+    let trials = req.trials.unwrap_or(1).clamp(1, 5);
+    let temperature = req
+        .temperature
+        .filter(|t| t.is_finite())
+        .unwrap_or(providers::HUNT_TEMPERATURE)
+        .clamp(0.0, 2.0);
+    let variants = if req.controls { 2 } else { 1 };
+    let total = providers.len() * canaries.len() * strategies.len() * trials as usize * variants;
+
     let mut probes = Vec::new();
     let mut hits = 0usize;
     let mut errors = 0usize;
+    let mut control_probes = 0usize;
+    let mut control_hits = 0usize;
+    let mut done = 0usize;
 
     for provider in &providers {
+        let mut provider_errors = 0usize;
         for canary in &canaries {
             for strategy in &strategies {
+                // The prompt always comes from the real canary; controls only
+                // swap the *target* for a scrambled decoy, so the detector is
+                // measured against exactly the reply a real probe would get.
                 let prompt = build_prompt(canary, strategy);
-                let _ = app.emit(
-                    "hunt-progress",
-                    HuntProgress {
-                        phase: "asking".into(),
-                        provider_id: provider.id.clone(),
-                        provider_name: provider.name.clone(),
-                        model: provider.model.clone(),
-                        canary_id: canary.id.clone(),
-                        strategy: strategy.clone(),
-                        message: format!(
-                            "Asking {} / {} about {} ({})",
-                            provider.name, provider.model, canary.kind_name, strategy
-                        ),
-                        hit: None,
-                    },
-                );
-
-                let result = providers::chat(&state.http, provider, &prompt).await;
-                let (response, error) = match result {
-                    Ok(t) => (t, None),
-                    Err(e) => {
-                        errors += 1;
-                        (String::new(), Some(e))
-                    }
-                };
-
-                let matched = if error.is_none() {
-                    if canary.family == "corpus" {
-                        corpus::detect_passage(&response, canary, &prompt)
-                    } else {
-                        canary::detect(&response, &canary.value, &canary.needles, &prompt)
-                    }
-                } else {
-                    vec![]
-                };
-                let hit = !matched.is_empty();
-                if hit {
-                    hits += 1;
+                let mut targets: Vec<(Canary, bool)> = vec![(canary.clone(), false)];
+                if req.controls {
+                    let prefix = canary::prefix_for(&canary.value);
+                    let seed = canary
+                        .id
+                        .bytes()
+                        .fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
+                            (h ^ b as u64).wrapping_mul(0x0100_0000_01b3)
+                        });
+                    let mut decoy = canary.clone();
+                    decoy.value = score::decoy_for(&canary.value, &prefix, seed);
+                    decoy.needles = vec![];
+                    targets.push((decoy, true));
                 }
 
-                let probe = Probe {
-                    id: new_id("probe"),
-                    at: now(),
-                    provider_id: provider.id.clone(),
-                    provider_name: provider.name.clone(),
-                    model: provider.model.clone(),
-                    canary_id: canary.id.clone(),
-                    canary_kind: canary.kind_name.clone(),
-                    canary_label: canary.label.clone(),
-                    strategy: strategy.clone(),
-                    prompt: prompt.clone(),
-                    response: response.clone(),
-                    hit,
-                    matched: matched.clone(),
-                    error: error.clone(),
-                    citation: citation_for(canary),
-                    sensitivity: provenance::sensitivity_for(canary).as_str().into(),
-                };
+                for (target, is_control) in &targets {
+                    for trial in 1..=trials {
+                        done += 1;
+                        let _ = app.emit(
+                            "hunt-progress",
+                            HuntProgress {
+                                phase: "asking".into(),
+                                provider_id: provider.id.clone(),
+                                provider_name: provider.name.clone(),
+                                model: provider.model.clone(),
+                                canary_id: canary.id.clone(),
+                                strategy: strategy.clone(),
+                                message: format!(
+                                    "[{done}/{total}] {} / {} · {} · {strategy}{}{}",
+                                    provider.name,
+                                    provider.model,
+                                    citation_for(canary),
+                                    if trials > 1 {
+                                        format!(" · trial {trial}/{trials}")
+                                    } else {
+                                        String::new()
+                                    },
+                                    if *is_control { " · control" } else { "" }
+                                ),
+                                hit: None,
+                                score: 0.0,
+                                control: *is_control,
+                                done,
+                                total,
+                            },
+                        );
 
-                let _ = app.emit(
-                    "hunt-progress",
-                    HuntProgress {
-                        phase: if error.is_some() {
-                            "error".into()
-                        } else if hit {
-                            "hit".into()
-                        } else {
-                            "clean".into()
-                        },
-                        provider_id: provider.id.clone(),
-                        provider_name: provider.name.clone(),
-                        model: provider.model.clone(),
-                        canary_id: canary.id.clone(),
-                        strategy: strategy.clone(),
-                        message: if let Some(e) = &error {
-                            e.clone()
-                        } else if hit {
-                            if canary.family == "corpus" {
-                                corpus::hit_message(&provider.name, canary)
-                            } else {
-                                format!("HIT — {} sang {}", provider.name, citation_for(canary))
+                        let result =
+                            providers::chat_at(&state.http, provider, &prompt, temperature).await;
+                        let (response, error) = match result {
+                            Ok(t) => (t, None),
+                            Err(e) => {
+                                errors += 1;
+                                provider_errors += 1;
+                                (String::new(), Some(e))
                             }
-                        } else {
-                            format!("{} / {} is clean", provider.name, provider.model)
-                        },
-                        hit: if error.is_some() { None } else { Some(hit) },
-                    },
-                );
+                        };
 
-                probes.push(probe);
+                        let eval = if error.is_none() {
+                            evaluate(&response, target, &prompt)
+                        } else {
+                            Evaluation {
+                                matched: vec![],
+                                score: 0.0,
+                                hit: false,
+                                abstained: false,
+                            }
+                        };
+                        if error.is_none() {
+                            if *is_control {
+                                control_probes += 1;
+                                if eval.hit {
+                                    control_hits += 1;
+                                }
+                            } else if eval.hit {
+                                hits += 1;
+                            }
+                        }
+
+                        let probe = Probe {
+                            id: new_id("probe"),
+                            at: now(),
+                            provider_id: provider.id.clone(),
+                            provider_name: provider.name.clone(),
+                            model: provider.model.clone(),
+                            canary_id: canary.id.clone(),
+                            canary_kind: canary.kind_name.clone(),
+                            canary_label: canary.label.clone(),
+                            strategy: strategy.clone(),
+                            prompt: prompt.clone(),
+                            response: response.clone(),
+                            hit: eval.hit,
+                            matched: eval.matched.clone(),
+                            error: error.clone(),
+                            citation: citation_for(canary),
+                            sensitivity: provenance::sensitivity_for(canary).as_str().into(),
+                            score: eval.score,
+                            trial,
+                            control: *is_control,
+                            abstained: eval.abstained,
+                            temperature,
+                        };
+
+                        let pct = (eval.score * 100.0).round() as u32;
+                        let _ = app.emit(
+                            "hunt-progress",
+                            HuntProgress {
+                                phase: if error.is_some() {
+                                    "error".into()
+                                } else if *is_control {
+                                    if eval.hit { "false-positive".into() } else { "control".into() }
+                                } else if eval.hit {
+                                    "hit".into()
+                                } else {
+                                    "clean".into()
+                                },
+                                provider_id: provider.id.clone(),
+                                provider_name: provider.name.clone(),
+                                model: provider.model.clone(),
+                                canary_id: canary.id.clone(),
+                                strategy: strategy.clone(),
+                                message: if let Some(e) = &error {
+                                    e.clone()
+                                } else if *is_control {
+                                    if eval.hit {
+                                        format!(
+                                            "FALSE POSITIVE — detector scored the decoy {pct}% for {}",
+                                            provider.name
+                                        )
+                                    } else {
+                                        format!("control clean ({pct}%)")
+                                    }
+                                } else if eval.hit {
+                                    if canary.family == "corpus" {
+                                        format!("{} · {pct}% verbatim", corpus::hit_message(&provider.name, canary))
+                                    } else {
+                                        format!(
+                                            "HIT — {} sang {} · {pct}% verbatim",
+                                            provider.name,
+                                            citation_for(canary)
+                                        )
+                                    }
+                                } else if eval.abstained {
+                                    format!("{} / {} abstained ({pct}%)", provider.name, provider.model)
+                                } else {
+                                    format!("{} / {} is clean ({pct}%)", provider.name, provider.model)
+                                },
+                                hit: if error.is_some() { None } else { Some(eval.hit) },
+                                score: eval.score,
+                                control: *is_control,
+                                done,
+                                total,
+                            },
+                        );
+
+                        probes.push(probe);
+                    }
+                }
             }
         }
 
         {
             let mut db = state.db.lock().map_err(|e| e.to_string())?;
             if let Some(p) = db.providers.iter_mut().find(|p| p.id == provider.id) {
-                if errors == 0 {
+                if provider_errors == 0 {
                     providers::mark_ok(p);
                 }
             }
@@ -367,6 +482,9 @@ async fn run_hunt(
         probes,
         hits,
         errors,
+        control_probes,
+        control_hits,
+        trials,
     })
 }
 
@@ -422,19 +540,16 @@ fn scan_text(state: State<AppState>, req: ScanRequest) -> Result<Vec<ScanHit>, S
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut hits = Vec::new();
     for c in &db.canaries {
-        let matched = if c.family == "corpus" {
-            corpus::detect_passage(&req.text, c, "")
-        } else {
-            canary::detect(&req.text, &c.value, &c.needles, "")
-        };
-        if !matched.is_empty() {
+        let eval = evaluate(&req.text, c, "");
+        if eval.hit {
             hits.push(ScanHit {
                 canary_id: c.id.clone(),
                 kind: c.kind_name.clone(),
                 label: c.label.clone(),
-                matched,
+                matched: eval.matched,
                 citation: citation_for(c),
                 sensitivity: provenance::sensitivity_for(c).as_str().into(),
+                score: eval.score,
             });
         }
     }
@@ -499,14 +614,11 @@ async fn chat_turn(
     let mut hits = Vec::new();
     let mut probes = Vec::new();
     for c in &canaries {
-        let matched = if c.family == "corpus" {
-            corpus::detect_passage(&reply, c, &last_user)
-        } else {
-            canary::detect(&reply, &c.value, &c.needles, &last_user)
-        };
-        if matched.is_empty() {
+        let eval = evaluate(&reply, c, &last_user);
+        if !eval.hit {
             continue;
         }
+        let matched = eval.matched;
         hits.push(ChatHit {
             canary_id: c.id.clone(),
             kind: c.kind_name.clone(),
@@ -514,6 +626,7 @@ async fn chat_turn(
             matched: matched.clone(),
             citation: citation_for(c),
             sensitivity: provenance::sensitivity_for(c).as_str().into(),
+            score: eval.score,
         });
         probes.push(Probe {
             id: new_id("probe"),
@@ -532,6 +645,11 @@ async fn chat_turn(
             error: None,
             citation: citation_for(c),
             sensitivity: provenance::sensitivity_for(c).as_str().into(),
+            score: eval.score,
+            trial: 1,
+            control: false,
+            abstained: false,
+            temperature: providers::CHAT_TEMPERATURE,
         });
     }
 
