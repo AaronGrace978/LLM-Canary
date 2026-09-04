@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing or new release tag to attach installers to
         required: true
-        default: v0.4.1
+        default: v0.5.0
 
 permissions:
   contents: write
